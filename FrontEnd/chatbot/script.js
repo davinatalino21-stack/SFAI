@@ -334,7 +334,9 @@ function converterCitacoesEmLinks(texto, fontes) {
   return texto.replace(
     padrao,
     (match, nomeComPagina, pagina, nomeSo, nomeBare) => {
-      const nome = (nomeComPagina || nomeSo || nomeBare || "").trim();
+      const nome = (nomeComPagina || nomeSo || nomeBare || "")
+        .replace(/<[^>]*>/g, "")
+        .trim();
       if (!nome) return match;
 
       let fonte = temFontes ? encontrarFonteCitacao(nome, porNome) : null;
@@ -346,7 +348,14 @@ function converterCitacoesEmLinks(texto, fontes) {
         fonte = { arquivo: nome, pagina: pagina || null };
       }
 
-      const url = montarUrlDocumento(fonte.arquivo, pagina || fonte.pagina);
+      const arquivoSeguro = String(fonte.arquivo || "")
+        .replace(/<[^>]*>/g, "")
+        .trim();
+
+      const url = montarUrlDocumento(
+        arquivoSeguro,
+        pagina || fonte.pagina
+);
       return `<a class="rag-citacao-link" href="${url}" target="_blank" rel="noopener noreferrer">${match}</a>`;
     },
   );
@@ -355,15 +364,18 @@ function converterCitacoesEmLinks(texto, fontes) {
 function formatarRespostaIA(texto, fontes) {
   if (!texto) return "";
 
+  // Primeiro transforma Markdown em HTML
+  texto = texto
+    .replace(/\*\*(.*?)\*\*/gs, "<strong>$1</strong>")
+    .replace(/(?<![\w.])_([^_\n]+?)_(?![\w.])/g, "<em>$1</em>")
+    .replace(/\*(.*?)\*/gs, "<em>$1</em>");
+
+  // Só depois transforma as citações em links
   texto = converterCitacoesEmLinks(texto, fontes);
+
   texto = texto.replace(/^[\s*•-]+\s+/gm, "");
 
-  let formatado = texto
-    .replace(/\*\*(.*?)\*\*/gs, "<strong>$1</strong>")
-    .replace(/_([^_\n]+?)_/g, "<em>$1</em>")
-    .replace(/\*(.*?)\*/g, "<em>$1</em>");
-
-  return formatado
+  return texto
     .split(/\n\n+/)
     .map((bloco) => {
       const linhas = bloco
@@ -376,12 +388,7 @@ function formatarRespostaIA(texto, fontes) {
       }
 
       const conteudo = linhas
-        .map((linha, index) => {
-          if (index === 0) {
-            return `<div class="ans-line">${linha}</div>`;
-          }
-          return `<div class="ans-line">${linha}</div>`;
-        })
+        .map((linha) => `<div class="ans-line">${linha}</div>`)
         .join("");
 
       return `<div class="ans-block">${conteudo}</div>`;
@@ -587,9 +594,7 @@ function renderizarFaq() {
     faqItem.appendChild(category);
 
     faqItem.addEventListener("click", () => {
-      input.value = item.pergunta;
-      enviarMensagem();
-      input.value = "";
+      usarSugestao(item.pergunta);
       fecharFaq();
     });
 
@@ -1055,6 +1060,13 @@ function fecharFaq() {
 
 function usarSugestao(texto) {
   if (!texto) return;
+
+  if (feiraSelecionada) {
+    feiraSelecionada = "";
+    input.placeholder = "O que vamos fazer hoje?";
+    atualizarModoBadge();
+  }
+
   input.value = texto;
   enviarMensagem();
 }
