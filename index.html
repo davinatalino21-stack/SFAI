@@ -23,14 +23,27 @@
     <div class="app">
       <!-- ======= Barra lateral de navegação ======= -->
       <aside class="sidebar" aria-label="Navegação principal">
-        <button
-          type="button"
-          class="brand"
-          onclick="window.location.href = 'Layout.html'"
-          title="Página inicial"
-        >
-          La<span>r</span>
-        </button>
+        <div class="sidebar-header">
+          <button
+            type="button"
+            class="brand"
+            onclick="window.location.href = 'Layout.html'"
+            title="Página inicial"
+          >
+            La<span>r</span>
+          </button>
+          <button
+            type="button"
+            class="sidebar-toggle"
+            title="Compactar menu"
+            aria-label="Compactar menu"
+            aria-expanded="true"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+        </div>
 
         <nav class="sidebar-nav">
           <button
@@ -63,20 +76,6 @@
           </button>
         </nav>
 
-        <div class="sidebar-foot">
-          <button
-            type="button"
-            class="nav-btn sidebar-collapse"
-            title="Recolher menu"
-            aria-label="Recolher menu"
-            aria-expanded="true"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
-            <span class="nav-label">Recolher</span>
-          </button>
-        </div>
       </aside>
 
       <!-- ======= Área principal ======= -->

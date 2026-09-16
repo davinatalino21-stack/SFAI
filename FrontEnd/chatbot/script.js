@@ -21,33 +21,31 @@ if (chatContainer && "MutationObserver" in window) {
 syncLayoutState();
 
 const sidebarEl = document.querySelector(".sidebar");
-const sidebarCollapseBtn = document.querySelector(".sidebar-collapse");
+const sidebarToggleBtn = document.querySelector(".sidebar-toggle");
 function aplicarEstadoSidebar(colapsado) {
   if (!sidebarEl) return;
   sidebarEl.classList.toggle("collapsed", colapsado);
-  if (sidebarCollapseBtn) {
-    sidebarCollapseBtn.setAttribute("aria-expanded", String(!colapsado));
-    const lbl = sidebarCollapseBtn.querySelector(".nav-label");
-    if (lbl) lbl.textContent = colapsado ? "Expandir" : "Recolher";
+  if (sidebarToggleBtn) {
+    sidebarToggleBtn.setAttribute("aria-expanded", String(!colapsado));
+    sidebarToggleBtn.setAttribute(
+      "aria-label",
+      colapsado ? "Expandir menu" : "Compactar menu",
+    );
+    sidebarToggleBtn.setAttribute(
+      "title",
+      colapsado ? "Expandir menu" : "Compactar menu",
+    );
   }
 }
-function toggleSidebar() {
+function alternarSidebar() {
   if (!sidebarEl) return;
-  const colapsado = !sidebarEl.classList.contains("collapsed");
-  aplicarEstadoSidebar(colapsado);
-  try {
-    localStorage.setItem("sfai_sidebar_collapsed", colapsado ? "1" : "0");
-  } catch (e) {}
+  aplicarEstadoSidebar(!sidebarEl.classList.contains("collapsed"));
 }
 function initSidebar() {
-  let colapsado = false;
-  try {
-    colapsado = localStorage.getItem("sfai_sidebar_collapsed") === "1";
-  } catch (e) {}
-  if (sidebarCollapseBtn) {
-    sidebarCollapseBtn.addEventListener("click", toggleSidebar);
+  if (sidebarToggleBtn) {
+    sidebarToggleBtn.addEventListener("click", alternarSidebar);
   }
-  aplicarEstadoSidebar(colapsado);
+  aplicarEstadoSidebar(false);
 }
 
 const token = localStorage.getItem("token");
