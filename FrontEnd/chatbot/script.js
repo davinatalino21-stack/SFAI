@@ -3,6 +3,7 @@ const chatArea = document.getElementById("chat-area");
 const chatContainer = document.getElementById("chat-container");
 const modeBadge = document.getElementById("modeBadge");
 const SECRET_CLEAR_CODE = "//clearAll";
+const PLACEHOLDER_PADRAO = 'aperte no "+" e classifique seu projeto!';
 
 const appMain = document.querySelector(".app-main");
 function syncLayoutState() {
@@ -237,7 +238,7 @@ function atualizarModoBadge() {
 modeBadge.addEventListener("click", () => {
   if (feiraSelecionada) {
     feiraSelecionada = "";
-    input.placeholder = "O que vamos fazer hoje?";
+    input.placeholder = PLACEHOLDER_PADRAO;
     atualizarModoBadge();
   }
 });
@@ -830,7 +831,7 @@ function selecionarFeira(opcao) {
     }
     input.placeholder = `${feiraSlecionadaLowerCase}`;
   } else {
-    input.placeholder = "O que vamos fazer hoje?";
+    input.placeholder = PLACEHOLDER_PADRAO;
   }
 
   atualizarModoBadge();
