@@ -1076,8 +1076,18 @@
 
 /* ----------------------------- Responsivo ----------------------------- */
 @media (max-width: 932px) {
+  /* --bottom-bar-h: altura da barra inferior. O mesmo valor é usado pela
+     barra (.sidebar) e pelo espaço reservado em .app-main, para que a base
+     da tela nunca sobreponha o campo nem fique área vazia.
+     --app-height / --app-offset-top: definidos por script.js somente no mobile,
+     quando a altura visível da tela é menor que a altura do layout (barra do
+     navegador ou teclado virtual). O transform mantém a barra inferior fixa
+     junto ao campo de mensagem. */
   .app {
+    --bottom-bar-h: 62px;
     flex-direction: column;
+    height: var(--app-height, 100dvh);
+    transform: translateY(var(--app-offset-top, 0px));
   }
 
   /* Sidebar vira barra inferior */
@@ -1087,11 +1097,13 @@
     left: 0;
     width: 100vw;
     min-width: 0;
-    height: 62px;
+    height: var(--bottom-bar-h);
     flex-direction: row;
     justify-content: space-around;
     align-items: center;
-    padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
+    padding: 4px calc(8px + env(safe-area-inset-right))
+      calc(4px + env(safe-area-inset-bottom))
+      calc(8px + env(safe-area-inset-left));
     border-right: none;
     border-top: 1px solid var(--border);
     z-index: 150;
@@ -1139,7 +1151,9 @@
     width: 100vw;
     min-width: 0;
     align-items: center;
-    padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
+    padding: 4px calc(8px + env(safe-area-inset-right))
+      calc(4px + env(safe-area-inset-bottom))
+      calc(8px + env(safe-area-inset-left));
   }
 
   .sidebar.collapsed .nav-btn {
@@ -1158,9 +1172,16 @@
     font-size: 1.15rem;
   }
 
+  /* A área principal ocupa exatamente a altura útil da tela e reserva a
+     barra inferior, sem sobra e sem sobreposição. */
   .app-main {
-    height: 100dvh;
-    padding-bottom: 62px;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: var(--bottom-bar-h);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   .topbar {
@@ -1227,6 +1248,17 @@
   .input-text textarea {
     font-size: 1rem;
     padding: 12px 12px;
+    /* O campo continua rolando por dentro quando o texto passa da
+       altura, mas sem barra de rolagem visível no mobile. */
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .input-text textarea::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   .app-footer {
@@ -1402,6 +1434,53 @@
 
   .app-main.state-chat .chat-stage {
     padding: 10px 12px 6px;
+  }
+}
+
+/* Tela baixa (celular deitado): a base fica mais compacta para que a
+   conversa rolável, o campo de mensagem e a barra inferior caibam juntos. */
+@media (max-width: 932px) and (max-height: 560px) {
+  .app {
+    --bottom-bar-h: 54px;
+  }
+
+  /* Título decorativo: em tela baixa ele rouba altura da conversa. */
+  .app-main.state-chat .chat-head {
+    display: none;
+  }
+
+  .app-main.state-chat .chat-stage {
+    padding: 8px 12px 4px;
+  }
+
+  .app-main.state-chat .composer-shell {
+    padding: 6px 12px 0;
+  }
+
+  .app-main.state-chat .composer-inner .input-area {
+    padding: 2px 0 4px;
+  }
+
+  /* O campo cresce menos, para nunca empurrar a conversa para fora. */
+  .input-text textarea {
+    max-height: 76px;
+    padding: 10px 12px;
+  }
+
+  .composer-shell {
+    padding: 14px 16px 18px;
+  }
+
+  .hero h1 {
+    font-size: 2rem;
+  }
+
+  .hero > p {
+    margin-top: 6px;
+  }
+
+  .hero-chips {
+    margin-top: 12px;
   }
 }
 

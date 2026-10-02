@@ -2,7 +2,13 @@
 <html lang="pt-br">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: habilita env(safe-area-inset-*) em telas com notch.
+         interactive-widget=resizes-content: no Android o teclado virtual
+         encolhe a área do layout, mantendo o campo e a barra visíveis. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta name="theme-color" content="#0a1628" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f6f9fc" media="(prefers-color-scheme: light)" />
     <title>SFAI — Assistente Inteligente</title>

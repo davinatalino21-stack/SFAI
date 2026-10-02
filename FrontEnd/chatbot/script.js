@@ -21,6 +21,67 @@ if (chatContainer && "MutationObserver" in window) {
 }
 syncLayoutState();
 
+// ============================================================
+// Viewport visível (somente mobile)
+// A barra do navegador e o teclado virtual reduzem a altura realmente
+// visível da tela, mas o .app usava 100dvh (altura do layout). Isso
+// deixava uma faixa vazia entre o campo de mensagem e a barra inferior.
+// Medimos o viewport visível e usamos --app-height / --app-offset-top
+// para o app ocupar só a parte visível; o transform mantém a barra
+// inferior fixa junto ao campo. Em desktop nada muda.
+// ============================================================
+const QUERY_MOBILE = "(max-width: 932px)";
+const appEl = document.querySelector(".app");
+
+function alturaDisponivel() {
+  const viewportVisual = window.visualViewport;
+  if (!viewportVisual || !window.matchMedia(QUERY_MOBILE).matches) {
+    return window.innerHeight;
+  }
+  return viewportVisual.height;
+}
+
+function sincronizarViewportVisual() {
+  if (!appEl) return;
+
+  const viewportVisual = window.visualViewport;
+  const mobile = window.matchMedia(QUERY_MOBILE).matches;
+  const alturaLayout = document.documentElement.clientHeight;
+  const encolheu =
+    mobile && viewportVisual && viewportVisual.height < alturaLayout - 1;
+
+  if (encolheu) {
+    appEl.style.setProperty(
+      "--app-height",
+      `${Math.round(viewportVisual.height)}px`,
+    );
+    appEl.style.setProperty(
+      "--app-offset-top",
+      `${Math.round(viewportVisual.offsetTop)}px`,
+    );
+  } else {
+    appEl.style.removeProperty("--app-height");
+    appEl.style.removeProperty("--app-offset-top");
+  }
+
+  // Com o teclado aberto o navegador pode rolar a página: volta ao topo.
+  if (window.scrollY !== 0) window.scrollTo(0, 0);
+
+  ajustarAlturaTextarea();
+}
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener(
+    "resize",
+    sincronizarViewportVisual,
+  );
+  window.visualViewport.addEventListener(
+    "scroll",
+    sincronizarViewportVisual,
+  );
+  window.addEventListener("orientationchange", sincronizarViewportVisual);
+}
+
 const sidebarEl = document.querySelector(".sidebar");
 const sidebarToggleBtn = document.querySelector(".sidebar-toggle");
 function aplicarEstadoSidebar(colapsado) {
@@ -220,7 +281,16 @@ modeBadge.addEventListener("click", () => {
 });
 
 function ajustarAlturaTextarea() {
-  const maxHeight = window.innerHeight * 0.35;
+  // Campo vazio mantém a altura de uma linha: em telas estreitas o
+  // placeholder quebraria em várias linhas e deixaria o campo alto.
+  if (!input.value.trim()) {
+    input.style.height = "";
+    return;
+  }
+
+  // Limita o crescimento do campo pela altura realmente disponível
+  // (com o teclado aberto sobra bem menos espaço).
+  const maxHeight = alturaDisponivel() * 0.35;
   const newHeight = Math.min(input.scrollHeight, maxHeight);
 
   if (input.offsetHeight !== newHeight) {
@@ -229,8 +299,7 @@ function ajustarAlturaTextarea() {
 }
 
 function resetarAlturaTextarea() {
-  input.style.height = "auto";
-  input.style.height = `${Math.min(input.scrollHeight, window.innerHeight * 0.35)}px`;
+  ajustarAlturaTextarea();
 }
 
 function sleep(ms) {
@@ -1108,4 +1177,6 @@ window.onload = function () {
   carregarConversas();
 
   renderizarFaq();
+
+  sincronizarViewportVisual();
 };
