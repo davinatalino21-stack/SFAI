@@ -1,0 +1,371 @@
+# CORREÇÃO COMPLETA – CHATBOT MOBILE
+# Espaço vazio + scrollbar do input + posicionamento da barra inferior
+
+Analise o código atual do projeto e corrija os problemas de layout apresentados no mobile.
+
+NÃO recrie a interface do zero.
+
+Localize os componentes, classes, estilos e estruturas existentes e faça as alterações diretamente neles.
+
+O objetivo é corrigir especificamente a parte inferior do chatbot no MOBILE, preservando o funcionamento e o visual do desktop.
+
+==================================================
+1. REMOVER O GRANDE ESPAÇO VAZIO NO MOBILE
+==================================================
+
+Na versão mobile existe um grande espaço vazio entre:
+
+- o campo de entrada de mensagem;
+- os botões "+" e enviar;
+- a barra inferior contendo "Histórico" e "Perguntas frequentes".
+
+Esse espaço aparece claramente no print fornecido e ocupa uma quantidade desnecessária da tela.
+
+Atualmente a estrutura visual está aproximadamente assim:
+
+[ conteúdo da conversa ]
+
+[ + ] [ campo de mensagem ] [ enviar ]
+
+
+        GRANDE ESPAÇO VAZIO
+
+
+[ Histórico ] [ Perguntas frequentes ]
+
+Esse espaço deve ser eliminado.
+
+O campo de mensagem deve ficar próximo da barra inferior, respeitando apenas o espaçamento necessário para uma boa interface.
+
+==================================================
+2. INVESTIGAR A CAUSA ANTES DE ALTERAR
+==================================================
+
+Antes de modificar o CSS, localize a causa real do espaço vazio.
+
+Procure principalmente por:
+
+- height: 100vh;
+- min-height: 100vh;
+- height: 100dvh;
+- min-height: 100dvh;
+- height: calc(...);
+- padding-bottom;
+- margin-bottom;
+- margin-top;
+- bottom;
+- position: fixed;
+- position: absolute;
+- display: flex;
+- flex: 1;
+- justify-content: space-between;
+- align-items;
+- safe-area-inset-bottom;
+- containers com altura fixa;
+- elementos invisíveis ocupando espaço;
+- wrappers vazios;
+- elementos duplicados;
+- cálculos de altura relacionados à barra inferior.
+
+Verifique também se algum container está reservando espaço para um elemento que não deveria mais existir.
+
+NÃO simplesmente coloque:
+
+margin-bottom: -XXXpx;
+
+ou outro valor arbitrário.
+
+Identifique a causa raiz e corrija a estrutura responsável pelo espaço.
+
+==================================================
+3. CORRIGIR A ESTRUTURA DE ALTURA DO CHAT
+==================================================
+
+Verifique o container principal do chatbot.
+
+Se existir algo semelhante a:
+
+.chat-container {
+    height: 100vh;
+}
+
+ou:
+
+.chat-container {
+    min-height: 100vh;
+}
+
+verifique se isso está causando conflito com a barra inferior e com a área de entrada.
+
+Quando apropriado, considere utilizar:
+
+.chat-container {
+    min-height: 100dvh;
+}
+
+ou estruturar o layout usando flexbox.
+
+Uma estrutura possível seria:
+
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.chat-input-area {
+    flex-shrink: 0;
+}
+
+.bottom-navigation {
+    flex-shrink: 0;
+}
+
+IMPORTANTE:
+
+Esses códigos são apenas referência.
+
+NÃO crie essas classes se o projeto já possui uma estrutura equivalente.
+
+Adapte a solução aos nomes e componentes reais do projeto.
+
+==================================================
+4. CORRIGIR O POSICIONAMENTO DO INPUT
+==================================================
+
+Localize o componente responsável pelo campo de mensagem.
+
+Pode ser:
+
+<input>
+
+<textarea>
+
+ou um componente React equivalente.
+
+O campo deve permanecer próximo da barra inferior.
+
+A área de entrada deve:
+
+- permanecer visível;
+- não ficar escondida atrás da barra inferior;
+- não criar espaço vazio;
+- não sair da tela;
+- continuar permitindo digitação;
+- manter o botão "+" funcionando;
+- manter o botão de envio funcionando.
+
+Se a barra inferior utilizar:
+
+position: fixed;
+
+verifique se o container do chat está reservando corretamente apenas o espaço necessário para ela.
+
+==================================================
+5. REMOVER VISUALMENTE O SCROLLBAR DO INPUT NO MOBILE
+==================================================
+
+O campo de entrada de mensagem apresenta uma barra de rolagem vertical visível.
+
+Essa barra deve ser removida VISUALMENTE no MOBILE.
+
+Porém, o campo deve continuar podendo rolar internamente caso o texto digitado ultrapasse sua altura.
+
+NÃO desative a rolagem do input.
+
+NÃO remova o scrollbar da conversa inteira.
+
+NÃO remova o scrollbar de outras partes do site.
+
+Caso o componente seja um textarea, utilize uma solução semelhante a:
+
+@media (max-width: 768px) {
+
+    .chat-input textarea {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .chat-input textarea::-webkit-scrollbar {
+        display: none;
+        width: 0;
+    }
+
+}
+
+Se o campo possuir outro seletor, utilize o seletor REAL encontrado no projeto.
+
+Não copie esse código cegamente.
+
+==================================================
+6. NÃO OCULTAR O SCROLLBAR GLOBALMENTE
+==================================================
+
+NÃO faça algo como:
+
+* {
+    scrollbar-width: none;
+}
+
+ou:
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+Isso é PROIBIDO nesta correção.
+
+O objetivo é ocultar somente o scrollbar visual do campo de entrada no mobile.
+
+A área principal das mensagens deve continuar com sua rolagem normal.
+
+==================================================
+7. CORRIGIR A BARRA INFERIOR
+==================================================
+
+A barra inferior contém:
+
+- Histórico;
+- Perguntas frequentes.
+
+Ela deve continuar funcionando normalmente.
+
+Verifique principalmente:
+
+position: fixed;
+bottom: 0;
+height;
+padding-bottom;
+margin-bottom;
+z-index;
+
+e qualquer cálculo de altura relacionado à barra.
+
+A barra inferior:
+
+- não deve criar espaço vazio;
+- não deve ficar distante do campo;
+- não deve sobrepor o input;
+- não deve sair da tela;
+- não deve causar overflow horizontal.
+
+==================================================
+8. SAFE AREA DO CELULAR
+==================================================
+
+Verifique se existe algo como:
+
+padding-bottom: env(safe-area-inset-bottom);
+
+Caso exista, verifique se está sendo utilizado corretamente.
+
+Não remova a proteção da área segura do celular sem necessidade.
+
+O objetivo é manter o espaço necessário para a área de navegação do aparelho, mas sem produzir o enorme espaço mostrado no print.
+
+==================================================
+9. RESPONSIVIDADE
+==================================================
+
+A correção deve ser aplicada principalmente ao MOBILE.
+
+Não prejudique o desktop.
+
+Verifique diferentes larguras e alturas de dispositivos, incluindo aproximadamente:
+
+- 360px;
+- 375px;
+- 390px;
+- 412px;
+- telas com maior altura;
+- telas com menor altura.
+
+Também considere o comportamento quando o teclado virtual do celular é aberto.
+
+O campo de mensagem não deve desaparecer atrás do teclado.
+
+==================================================
+10. MANTER AS FUNCIONALIDADES EXISTENTES
+==================================================
+
+Não remover nem quebrar:
+
+- histórico;
+- perguntas frequentes;
+- campo de mensagem;
+- botão "+";
+- botão de envio;
+- rolagem da conversa;
+- sistema de mensagens;
+- navegação;
+- outras funcionalidades existentes.
+
+A alteração deve ser focada no layout e no comportamento da parte inferior do chatbot no mobile.
+
+==================================================
+11. RESULTADO ESPERADO
+==================================================
+
+A parte inferior do chatbot deve ficar aproximadamente assim:
+
+┌─────────────────────────────┐
+│                             │
+│       CONVERSA / MENSAGENS  │
+│                             │
+│                             │
+│                             │
+├─────────────────────────────┤
+│ + │ Campo de mensagem │ ➤  │
+├─────────────────────────────┤
+│ Histórico │ Perguntas freq.│
+└─────────────────────────────┘
+
+NÃO deve existir a grande área vazia mostrada no print.
+
+Além disso:
+
+- O input deve ficar próximo da barra inferior.
+- O scrollbar do input deve ficar visualmente oculto no mobile.
+- O input continua funcionando normalmente.
+- O texto longo continua podendo ser rolado dentro do input.
+- A conversa continua podendo ser rolada.
+- O botão "+" continua funcionando.
+- O botão de envio continua funcionando.
+- A barra inferior continua funcionando.
+- Não deve existir sobreposição entre os elementos.
+- O desktop deve continuar funcionando como antes.
+
+==================================================
+12. PROCEDIMENTO OBRIGATÓRIO
+==================================================
+
+Antes de modificar o código:
+
+1. Localize o componente principal do chatbot.
+2. Localize o componente do campo de mensagem.
+3. Localize a barra inferior.
+4. Localize os estilos responsáveis pelo posicionamento desses elementos.
+5. Identifique a causa exata do espaço vazio.
+6. Identifique o seletor exato do input.
+7. Faça a menor alteração necessária.
+8. Verifique possíveis regras CSS conflitantes.
+9. Teste o comportamento mobile.
+10. Verifique se o desktop não foi afetado.
+
+NÃO simplesmente adicione CSS por cima do código existente.
+
+Corrija a causa raiz.
+
+Ao finalizar, informe:
+
+- qual era a causa do espaço vazio;
+- quais arquivos foram modificados;
+- quais classes/componentes foram alterados;
+- como o scrollbar do input foi ocultado;
+- quais alterações foram específicas para mobile;
+- se alguma alteração afetou o desktop.
