@@ -13,6 +13,9 @@
       rel="stylesheet"
     />
     <script src="Theme/theme.js" defer></script>
+    <script src="Theme/account.js" defer></script>
+    <script src="Theme/preferences.js" defer></script>
+    <script src="Theme/ui.js" defer></script>
     <link rel="stylesheet" href="Theme/theme.css" />
     <link rel="stylesheet" href="Theme/ui.css" />
     <link rel="stylesheet" href="Settings/settings.css" />
@@ -28,26 +31,27 @@
           <p class="eyebrow">Configurações</p>
           <h1>Ajustes do SFAI</h1>
           <p class="page-description">
-            Personalize aparência, comportamento e sua conta de forma segura.
+            Personalize a aparência, o comportamento do assistente e confira os
+            dados da sua conta.
           </p>
         </div>
       </header>
 
       <section class="settings-grid">
-        <article class="settings-card">
+        <article class="settings-card settings-card--full">
           <div class="card-title">
             <span class="card-icon">🎨</span>
             <div>
               <h2>Aparência</h2>
-              <p>Controle o tema e estilo do ambiente de trabalho.</p>
+              <p>Escolha como o SFAI aparece neste dispositivo.</p>
             </div>
           </div>
-          <div class="card-body">
+          <div class="settings-body">
             <div class="settings-row">
-              <div>
-                <p class="label">Tema escuro</p>
+              <div class="settings-row-text">
+                <label class="label" for="themeToggle">Tema escuro</label>
                 <p class="field-note">
-                  Ative para manter o visual escuro em todo o app.
+                  Ative para manter o visual escuro em todas as páginas.
                 </p>
               </div>
               <label class="switch">
@@ -58,45 +62,68 @@
           </div>
         </article>
 
-        <article class="settings-card">
+        <article class="settings-card settings-card--full">
           <div class="card-title">
             <span class="card-icon">🤖</span>
             <div>
               <h2>Assistente</h2>
-              <p>Defina como o chatbot deve responder e salvar seu trabalho.</p>
+              <p>Defina como o chatbot responde e guarda as conversas.</p>
             </div>
           </div>
-          <div class="card-body">
+          <div class="settings-body">
             <div class="settings-row">
-              <div>
-                <p class="label">Mostrar animação de digitação</p>
+              <div class="settings-row-text">
+                <label class="label" for="typingAnimationToggle">
+                  Mostrar animação de digitação
+                </label>
+                <p class="field-note">
+                  A resposta aparece letra por letra, como se a IA estivesse
+                  escrevendo.
+                </p>
               </div>
               <label class="switch">
                 <input id="typingAnimationToggle" type="checkbox" />
                 <span class="slider"></span>
               </label>
             </div>
+
             <div class="settings-row">
-              <div>
-                <p class="label">Enviar com Enter</p>
+              <div class="settings-row-text">
+                <label class="label" for="enterSendToggle">
+                  Enviar com Enter
+                </label>
+                <p class="field-note">
+                  Desative para quebrar linha com Enter. Com a opção ativa,
+                  Shift + Enter continua quebrando linha.
+                </p>
               </div>
               <label class="switch">
                 <input id="enterSendToggle" type="checkbox" />
                 <span class="slider"></span>
               </label>
             </div>
+
             <div class="settings-row">
-              <div>
-                <p class="label">Salvar histórico automaticamente</p>
+              <div class="settings-row-text">
+                <label class="label" for="autoSaveHistoryToggle">
+                  Salvar histórico automaticamente
+                </label>
+                <p class="field-note">
+                  Guarda a conversa atual neste navegador para continuar depois.
+                </p>
               </div>
               <label class="switch">
                 <input id="autoSaveHistoryToggle" type="checkbox" />
                 <span class="slider"></span>
               </label>
             </div>
-            <button id="clearHistoryButton" class="btn-secondary btn-block">
-              Limpar histórico do chat
-            </button>
+
+            <div class="card-actions">
+              <button type="button" id="clearHistoryButton" class="btn btn-secondary">
+                Limpar histórico do chat
+              </button>
+              <p class="card-actions-note" id="historyStatus"></p>
+            </div>
           </div>
         </article>
 
@@ -105,41 +132,47 @@
             <span class="card-icon">👤</span>
             <div>
               <h2>Conta</h2>
-              <p>Gerencie login, conexões e proteções da sua conta.</p>
+              <p>Dados do seu login no SFAI.</p>
             </div>
           </div>
-          <div class="card-body">
-            <div class="settings-row split-row">
-              <div>
+          <div class="settings-body">
+            <div class="settings-row">
+              <div class="settings-row-text">
                 <p class="label">Nome</p>
-                <p id="settingsAccountName" class="field-value">Usuário</p>
-              </div>
-              <div>
-                <p class="label">Email</p>
-                <p id="settingsAccountEmail" class="field-value">
-                  email@exemplo.com
-                </p>
+                <p id="settingsAccountName" class="field-value">—</p>
               </div>
             </div>
             <div class="settings-row">
-              <div>
-                <p class="label">Método de login</p>
-                <p id="settingsAccountMethod" class="field-value">Conta SFAI</p>
+              <div class="settings-row-text">
+                <p class="label">Email</p>
+                <p id="settingsAccountEmail" class="field-value">—</p>
               </div>
             </div>
-            <div class="button-grid">
-              <button id="changePasswordButton" class="btn-primary btn-block">
-                Alterar senha
+            <div class="settings-row">
+              <div class="settings-row-text">
+                <p class="label">Identificador</p>
+                <p id="settingsAccountId" class="field-value">—</p>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-text">
+                <p class="label">Método de login</p>
+                <p id="settingsAccountMethod" class="field-value">—</p>
+              </div>
+            </div>
+
+            <div class="account-badges">
+              <span class="account-badge" id="settingsAccountBadge">Conta SFAI</span>
+            </div>
+
+            <div class="card-actions">
+              <button type="button" id="editProfileButton" class="btn btn-primary">
+                Editar dados da conta
               </button>
-              <button id="linkGoogleButton" class="btn-primary btn-block">
-                Vincular Google
-              </button>
-              <button id="unlinkGoogleButton" class="btn-secondary btn-block">
-                Desvincular Google
-              </button>
-              <button id="deleteAccountButton" class="btn-danger btn-block">
-                Excluir conta
-              </button>
+              <p class="card-actions-note">
+                Abre a página de perfil, onde nome e avatar podem ser
+                alterados.
+              </p>
             </div>
           </div>
         </article>
@@ -149,45 +182,58 @@
             <span class="card-icon">🚪</span>
             <div>
               <h2>Sessão</h2>
-              <p>Controle o acesso atual e a gestão de dispositivos.</p>
+              <p>Encerre o acesso atual neste dispositivo.</p>
             </div>
           </div>
-          <div class="card-body">
-            <button id="logoutButton" class="btn-secondary btn-block">
-              Sair
-            </button>
-            <button id="logoutAllButton" class="btn-secondary btn-block">
-              Sair de todos os dispositivos
-            </button>
+          <div class="settings-body">
+            <div class="settings-row">
+              <div class="settings-row-text">
+                <p class="label">Sair da conta</p>
+                <p class="field-note">
+                  Remove o acesso salvo neste navegador. As conversas já
+                  enviadas ao servidor continuam no seu histórico.
+                </p>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button type="button" id="logoutButton" class="btn btn-secondary">
+                Sair
+              </button>
+            </div>
           </div>
         </article>
       </section>
 
       <div id="confirmModal" class="modal-overlay hidden">
-        <div class="modal-card">
+        <div
+          class="modal-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirmModalTitle"
+        >
           <div class="modal-header">
             <div>
-              <p class="eyebrow">Confirmar exclusão</p>
-              <h2>Excluir conta</h2>
+              <p class="eyebrow">Confirmar ação</p>
+              <h2 id="confirmModalTitle">Limpar histórico do chat</h2>
             </div>
             <button
               type="button"
               class="icon-button"
-              id="closeDeleteModalButton"
+              id="closeConfirmModalButton"
+              aria-label="Fechar"
             >
               ✕
             </button>
           </div>
-          <p class="modal-description">
-            Ao confirmar, sua conta será marcada para exclusão no backend. Esta
-            ação ainda não será executada.
+          <p class="modal-description" id="confirmModalDescription">
+            Todas as conversas salvas serão apagadas e não poderá ser desfeito.
           </p>
           <div class="modal-actions">
-            <button id="cancelDeleteButton" class="btn-secondary">
+            <button type="button" id="cancelConfirmButton" class="btn btn-secondary">
               Cancelar
             </button>
-            <button id="confirmDeleteButton" class="btn-danger">
-              Confirmar
+            <button type="button" id="confirmClearHistoryButton" class="btn btn-danger">
+              Limpar histórico
             </button>
           </div>
         </div>

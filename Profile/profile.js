@@ -1,30 +1,10 @@
-const userStorageKey = "usuario";
-const tokenStorageKey = "token";
-
-const getUserData = () => {
-  const rawUser = localStorage.getItem(userStorageKey);
-  if (!rawUser) return null;
-  try {
-    return JSON.parse(rawUser);
-  } catch (error) {
-    console.error("Falha ao ler usuário do localStorage:", error);
-    return null;
-  }
-};
+const getUserData = () => window.SFAIAccount.get();
 
 const saveUserData = async (updatedUser) => {
-  localStorage.setItem(userStorageKey, JSON.stringify(updatedUser));
+  window.SFAIAccount.save(updatedUser);
 };
 
-const getInitials = (name) => {
-  const parts = String(name || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (!parts.length) return "U";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-};
+const getInitials = (name) => window.SFAIAccount.getInitials(name);
 
 const escapeHtml = (value) => {
   const p = document.createElement("p");
@@ -45,30 +25,12 @@ const updateNavbarAvatar = (user) => {
   navbarIcon.innerHTML = buildAvatar(user);
 };
 
-const showToast = (message) => {
-  const container = document.getElementById("toastContainer");
-  if (!container) return;
-
-  const toast = document.createElement("div");
-  toast.className = "toast";
-  toast.textContent = message;
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.style.opacity = "0";
-  }, 2400);
-
-  setTimeout(() => {
-    if (toast.parentNode === container) {
-      container.removeChild(toast);
-    }
-  }, 2800);
-};
+const showToast = (message) => window.SFAIUI.toast(message);
 
 const populateProfile = () => {
   const user = getUserData();
   if (!user) {
-    window.location.href = "Login/login.html";
+    window.SFAIAccount.requireAuth();
     return;
   }
 
@@ -82,9 +44,10 @@ const populateProfile = () => {
   const profileAvatarUrl = document.getElementById("editAvatarUrl");
   const avatarFieldNote = document.getElementById("avatarFieldNote");
 
-  const loginMethod = user.loginMethod || (user.foto ? "Google" : "Conta SFAI");
+  const loginMethod = window.SFAIAccount.getLoginMethod(user);
   const createdAt = user.createdAt || "Não disponível";
-  const isGoogleAccount = loginMethod === "Google";
+  const isGoogleAccount = window.SFAIAccount.isGoogleAccount(user);
+
 
   if (profileAvatar) profileAvatar.innerHTML = buildAvatar(user);
   if (profileName) profileName.textContent = user.nome || "Usuário";
@@ -112,19 +75,18 @@ const populateProfile = () => {
 const openEditModal = () => {
   const user = getUserData();
   if (!user) {
-    window.location.href = "Login/login.html";
+    window.SFAIAccount.requireAuth();
     return;
   }
 
   const editName = document.getElementById("editName");
   const editAvatarUrl = document.getElementById("editAvatarUrl");
   const modal = document.getElementById("editProfileModal");
-  const loginMethod = user.loginMethod || (user.foto ? "Google" : "Conta SFAI");
+  const isGoogleAccount = window.SFAIAccount.isGoogleAccount(user);
 
   if (editName) editName.value = user.nome || "";
-  if (editAvatarUrl)
-    editAvatarUrl.value = loginMethod === "Google" ? "" : user.foto || "";
-  if (editAvatarUrl) editAvatarUrl.disabled = loginMethod === "Google";
+  if (editAvatarUrl) editAvatarUrl.value = isGoogleAccount ? "" : user.foto || "";
+  if (editAvatarUrl) editAvatarUrl.disabled = isGoogleAccount;
 
   if (modal) {
     modal.classList.remove("hidden");
@@ -146,14 +108,13 @@ const submitProfileUpdate = async (event) => {
   const editAvatarUrl = document.getElementById("editAvatarUrl");
   if (!editName || !editAvatarUrl) return;
 
-  const loginMethod = user.loginMethod || (user.foto ? "Google" : "Conta SFAI");
+  const isGoogleAccount = window.SFAIAccount.isGoogleAccount(user);
   const updatedUser = {
     ...user,
     nome: editName.value.trim() || user.nome,
-    foto:
-      loginMethod === "Google"
-        ? user.foto
-        : editAvatarUrl.value.trim() || user.foto,
+    foto: isGoogleAccount
+      ? user.foto
+      : editAvatarUrl.value.trim() || user.foto,
   };
 
   const API_BASE_URL =
@@ -164,7 +125,7 @@ const submitProfileUpdate = async (event) => {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem(tokenStorageKey)}`,
+        Authorization: `Bearer ${window.SFAIAccount.getToken()}`,
       },
       body: JSON.stringify(updatedUser),
     });
@@ -186,11 +147,7 @@ const submitProfileUpdate = async (event) => {
 };
 
 const initProfilePage = () => {
-  const token = localStorage.getItem(tokenStorageKey);
-  if (!token) {
-    window.location.href = "Login/login.html";
-    return;
-  }
+  if (!window.SFAIAccount.requireAuth()) return;
 
   const backButton = document.getElementById("backButton");
   const editProfileButton = document.getElementById("editProfileButton");
@@ -204,7 +161,7 @@ const initProfilePage = () => {
 
   if (backButton) {
     backButton.addEventListener("click", () => {
-      window.location.href = "index.html";
+      window.SFAIUI.back("index.html");
     });
   }
 
@@ -214,8 +171,7 @@ const initProfilePage = () => {
 
   if (logoutButton) {
     logoutButton.addEventListener("click", () => {
-      localStorage.removeItem(tokenStorageKey);
-      localStorage.removeItem(userStorageKey);
+      window.SFAIAccount.clear();
       window.location.href = "Login/login.html";
     });
   }

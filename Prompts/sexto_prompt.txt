@@ -1,0 +1,250 @@
+Claro. Pelo print, além do botão **Voltar** não funcionar, a página de configurações parece estar praticamente como uma tela estática: os switches não apresentam interação adequada, os dados da conta parecem apenas textos e há elementos com aparência de componentes quebrados.
+
+Use este prompt no OpenCode:
+
+---
+
+# Prompt – Corrigir e tornar funcional a página de Configurações
+
+Preciso que você faça uma **revisão completa da página de Configurações do site**, pois atualmente ela apresenta problemas de interação e navegação.
+
+A página pode ser visualizada no print fornecido. **Não quero apenas alterações visuais:** é necessário verificar e corrigir a lógica e os eventos dos componentes para que as configurações realmente funcionem.
+
+## 1. Corrigir o botão "← Voltar"
+
+### Problema
+
+O botão **"← Voltar"** aparece no topo da página de configurações, porém, quando clicado, **não retorna para a página anterior**.
+
+### Correção
+
+- Verificar como a navegação do projeto está implementada.
+- Corrigir o evento do botão.
+- Fazer com que ele retorne corretamente à tela anterior ou à página principal apropriada.
+- Não utilizar um redirecionamento fixo que possa quebrar a navegação.
+- Se o projeto utilizar React Router ou outro sistema de rotas, utilizar o mecanismo de navegação já existente no projeto.
+- Garantir que o botão funcione tanto em desktop quanto em dispositivos móveis.
+- Verificar se existem outros botões de voltar no projeto com o mesmo problema e, se houver, corrigir a causa de forma reutilizável.
+
+---
+
+# 2. Tornar os controles de configuração realmente interativos
+
+Atualmente os controles da página parecem estar apenas sendo exibidos visualmente.
+
+Verificar e tornar funcionais todas as opções disponíveis.
+
+### Tema escuro
+
+O switch de **"Tema escuro"** deve:
+
+- responder ao clique/toque;
+- alterar o tema da aplicação;
+- atualizar visualmente o estado do switch;
+- manter a configuração após mudar de página;
+- se possível, persistir a preferência no `localStorage` ou no mecanismo de persistência já utilizado pelo projeto.
+
+**Importante:** não implementar uma segunda lógica de tema se o projeto já possuir um sistema de tema. Reutilizar a implementação existente.
+
+---
+
+### Mostrar animação de digitação
+
+O switch de **"Mostrar animação de digitação"** deve:
+
+- ser clicável;
+- possuir estado `ativado/desativado`;
+- alterar efetivamente o comportamento do chatbot;
+- manter a preferência salva.
+
+---
+
+### Enviar com Enter
+
+O switch de **"Enviar com Enter"** deve:
+
+- ser interativo;
+- permitir ativar/desativar o envio da mensagem utilizando Enter;
+- refletir corretamente o estado atual;
+- alterar o comportamento do campo de mensagem do chatbot;
+- preservar a possibilidade de utilizar `Shift + Enter` para quebra de linha, caso essa funcionalidade já exista.
+
+---
+
+### Salvar histórico automaticamente
+
+O switch de **"Salvar histórico automaticamente"** deve:
+
+- ser interativo;
+- permitir ativar/desativar o salvamento automático;
+- realmente alterar o comportamento do histórico;
+- manter a preferência persistida.
+
+---
+
+# 3. Corrigir o botão "Limpar histórico do chat"
+
+O elemento **"Limpar histórico do chat"** também deve ser funcional.
+
+Ao clicar:
+
+1. Solicitar confirmação ao usuário antes de apagar os dados.
+2. Caso o usuário confirme, limpar o histórico de conversas.
+3. Atualizar a interface imediatamente.
+4. Garantir que as conversas realmente sejam removidas do mecanismo de armazenamento utilizado pelo projeto.
+5. Caso o usuário cancele, não alterar nada.
+
+Não apagar o histórico simplesmente ao clicar sem confirmação.
+
+---
+
+# 4. Corrigir e tornar funcional a seção "Conta"
+
+A seção **Conta** atualmente apresenta informações como:
+
+- Nome
+- Usuário
+- Email
+- Método de login
+- Conta SFAI
+
+Verificar se essas informações estão realmente sendo obtidas do estado/sistema de autenticação do projeto.
+
+### Requisitos
+
+- Não deixar dados fictícios ou valores fixos caso exista um sistema de usuário/autenticação.
+- Exibir os dados reais do usuário autenticado.
+- Se determinada informação ainda não estiver disponível, apresentar um estado apropriado em vez de inventar dados.
+- Verificar se existe funcionalidade de edição de dados da conta e, caso já exista, garantir que esteja funcionando.
+
+---
+
+# 5. Corrigir o layout da página
+
+Além da funcionalidade, a página apresenta problemas visuais.
+
+No print é possível observar:
+
+- grande quantidade de espaço vazio;
+- controles desalinhados;
+- switches próximos demais de outros elementos;
+- botão de limpeza ocupando uma largura inadequada;
+- hierarquia visual inconsistente;
+- conteúdo concentrado em uma pequena região da tela.
+
+Reorganizar a página para que ela tenha uma estrutura mais clara.
+
+### Sugestão de organização
+
+```text
+← Voltar
+
+CONFIGURAÇÕES
+Ajustes do SFAI
+Personalize aparência, comportamento e sua conta.
+
+┌─────────────────────────────┐
+│ 🎨 Aparência                │
+│                             │
+│ Tema escuro          [ ON ] │
+└─────────────────────────────┘
+
+┌─────────────────────────────┐
+│ 🤖 Assistente               │
+│                             │
+│ Animação de digitação [ON]  │
+│ Enviar com Enter       [ON] │
+│ Salvar histórico       [ON] │
+│                             │
+│ [ Limpar histórico ]        │
+└─────────────────────────────┘
+
+┌─────────────────────────────┐
+│ 👤 Conta                    │
+│                             │
+│ Nome                        │
+│ Usuário                     │
+│ Email                       │
+│ Método de login             │
+└─────────────────────────────┘
+```
+
+Não é necessário seguir exatamente esse desenho. Use-o apenas como referência de organização.
+
+---
+
+# 6. Responsividade
+
+A página precisa funcionar corretamente em:
+
+- 📱 celulares;
+- 📱 tablets;
+- 💻 notebooks;
+- 🖥️ monitores grandes.
+
+No mobile:
+
+- evitar conteúdo cortado;
+- evitar elementos sobrepostos;
+- manter os controles fáceis de tocar;
+- manter o botão Voltar acessível;
+- utilizar espaçamentos adequados;
+- garantir que todos os elementos possam ser visualizados através da rolagem.
+
+---
+
+# 7. Verificar a implementação existente antes de alterar
+
+**Não simplesmente recrie a página.**
+
+Antes de modificar o código:
+
+1. Localize o componente da página de Configurações.
+2. Identifique o sistema de rotas utilizado.
+3. Identifique o sistema de autenticação.
+4. Identifique como o tema é controlado.
+5. Identifique onde o histórico de conversas é armazenado.
+6. Identifique se as preferências do usuário já possuem algum sistema de persistência.
+7. Reutilize as funções, estados, hooks e componentes existentes sempre que possível.
+
+Evite criar lógica duplicada.
+
+---
+
+# 8. Não quebrar funcionalidades existentes
+
+Durante a correção:
+
+- Não remover funcionalidades que já funcionam.
+- Não alterar desnecessariamente outras páginas.
+- Não modificar a identidade visual do SFAI.
+- Não criar dependências desnecessárias.
+- Não deixar imports ou componentes inutilizados.
+- Não criar estados que não sejam utilizados.
+- Não utilizar valores fictícios para mascarar funcionalidades que não existem.
+- Manter o código organizado e reutilizável.
+
+---
+
+# 9. Testes obrigatórios
+
+Depois das alterações, testar:
+
+- [ ] Botão Voltar funciona.
+- [ ] Tema escuro funciona.
+- [ ] Animação de digitação funciona.
+- [ ] Enviar com Enter funciona.
+- [ ] Salvar histórico funciona.
+- [ ] Limpar histórico funciona com confirmação.
+- [ ] Dados da conta são exibidos corretamente.
+- [ ] Configurações permanecem após recarregar a página.
+- [ ] Página funciona no mobile.
+- [ ] Página funciona no desktop.
+- [ ] Nenhum erro aparece no console.
+- [ ] Nenhuma outra funcionalidade do site foi quebrada.
+
+## Resultado esperado
+
+Quero que a página de **Configurações deixe de ser apenas uma interface visual e passe a funcionar de verdade**, utilizando a arquitetura e os sistemas já existentes no projeto.
+
+**Primeiro identifique a causa dos problemas e a estrutura atual do projeto. Depois implemente as correções. Não faça alterações desnecessárias fora do escopo.**

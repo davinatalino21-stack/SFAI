@@ -671,6 +671,8 @@
 }
 
 /* ----------------------------- Footer ----------------------------- */
+/* Na tela de conversa o rodapé divide a mesma cor do composer, para que
+   input + rodapé formem um único bloco visual na base da tela. */
 .app-footer {
   flex-shrink: 0;
   display: flex;
@@ -680,6 +682,12 @@
   padding: 10px 16px 14px;
   font-size: 0.82rem;
   color: var(--text-secondary);
+  background: transparent;
+  transition: background 0.2s ease;
+}
+
+.app-main.state-chat .app-footer {
+  background: var(--surface);
 }
 
 .app-footer a {
@@ -1381,8 +1389,15 @@
     padding: 20px 16px 24px;
   }
 
+  /* Composer colado na barra inferior: sem espaço vertical sobrando.
+     O 62px da barra inferior já é reservado pelo .app-main,
+     e o safe-area é tratado dentro da própria barra. */
   .app-main.state-chat .composer-shell {
-    padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+    padding: 8px 12px 0;
+  }
+
+  .app-main.state-chat .composer-inner .input-area {
+    padding: 4px 0 6px;
   }
 
   .app-main.state-chat .chat-stage {
