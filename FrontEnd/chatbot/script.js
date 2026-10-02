@@ -53,36 +53,14 @@ function initSidebar() {
 
 const token = localStorage.getItem("token");
 
-const getUserData = () => {
-  const rawUser = localStorage.getItem("usuario");
-  if (!rawUser) {
-    return null;
-  }
-  try {
-    return JSON.parse(rawUser);
-  } catch (error) {
-    console.error("Falha ao ler usuário do localStorage:", error);
-    return null;
-  }
-};
+// Preferências definidas na página de Configurações (Settings/settings.js).
+// Sem o módulo carregado (ou sem preferência salva), vale o padrão "ativo".
+const preferenciaAtiva = (chave) => window.SFAIPrefs?.get(chave) !== false;
 
-const getUserInitials = (name) => {
-  const parts = String(name || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+const getUserData = () => window.SFAIAccount?.get() ?? null;
 
-  if (!parts.length) {
-    return "US";
-  }
-
-  const initials =
-    parts.length === 1
-      ? parts[0].slice(0, 2)
-      : `${parts[0][0]}${parts[parts.length - 1][0]}`;
-
-  return initials.toUpperCase();
-};
+const getUserInitials = (name) =>
+  window.SFAIAccount?.getInitials(name, "US") ?? "US";
 
 const closeUserMenu = () => {
   const button = document.getElementById("userMenuButton");
@@ -396,6 +374,12 @@ function montarUrlDocumento(arquivo, pagina) {
 }
 
 async function digitarTexto(elemento, html, velocidade = 5) {
+  // Configuração "Mostrar animação de digitação" desligada: exibe tudo de uma vez.
+  if (!preferenciaAtiva("typingAnimation")) {
+    elemento.innerHTML = html;
+    return;
+  }
+
   elemento.innerHTML = "";
   let exibicaoParcial = "";
   let indice = 0;
@@ -707,23 +691,31 @@ function limparHistorico() {
 }
 
 function getUserStoragePrefix() {
-  const user = getUserData();
-  return user?.id ? `user_${user.id}_` : "";
+  return window.SFAIAccount?.getStoragePrefix(getUserData()) ?? "";
 }
 
 function limparChatSalvo() {
   chatMessages = [];
   historicoConversa = [];
   conversaAtualId = null;
+
+  const prefix = getUserStoragePrefix();
+  localStorage.removeItem(prefix + "chatMessages");
+  localStorage.removeItem(prefix + "historicoConversa");
 }
 
 function salvarConversaAtual() {
+  // Configuração "Salvar histórico automaticamente" desligada.
+  if (!preferenciaAtiva("autoSaveHistory")) return;
+
   const prefix = getUserStoragePrefix();
   localStorage.setItem(prefix + "chatMessages", JSON.stringify(chatMessages));
   localStorage.setItem(prefix + "historicoConversa", JSON.stringify(historicoConversa));
 }
 
 function carregarConversaAtual() {
+  if (!preferenciaAtiva("autoSaveHistory")) return;
+
   const prefix = getUserStoragePrefix();
 
   Object.keys(localStorage).forEach((key) => {
@@ -794,14 +786,14 @@ let contexto = "";
 let feiraSelecionada = "";
 
 input.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    if (event.shiftKey) {
-      return;
-    } else {
-      event.preventDefault();
-      enviarMensagem();
-    }
-  }
+  if (event.key !== "Enter") return;
+  // Shift + Enter sempre quebra linha.
+  if (event.shiftKey) return;
+  // Configuração "Enviar com Enter" desligada: Enter quebra linha.
+  if (!preferenciaAtiva("enterSend")) return;
+
+  event.preventDefault();
+  enviarMensagem();
 });
 
 function toggleFeiraPopup() {

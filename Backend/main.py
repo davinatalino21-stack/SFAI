@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr
@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text as texto_sql
 from database import SessionLocal
 from models import Usuario, Conversa, Mensagem
-from auth import gerar_hash_senha, verificar_senha, criar_token
+from auth import gerar_hash_senha, verificar_senha, criar_token, verificar_token
 
 try:
     import fitz  # PyMuPDF
@@ -1059,6 +1059,33 @@ def get_db():
         db.close()
 
 
+def usuario_autenticado(
+    authorization: str | None = Header(default=None),
+) -> int:
+    """Valida o token JWT e devolve o id do usuário logado."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Sessão ausente.",
+        )
+
+    payload = verificar_token(authorization[len("Bearer "):].strip())
+
+    if not payload:
+        raise HTTPException(
+            status_code=401,
+            detail="Sessão inválida ou expirada.",
+        )
+
+    try:
+        return int(payload.get("sub"))
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=401,
+            detail="Sessão inválida.",
+        )
+
+
 class RequisicaoProjeto(BaseModel):
     usuario_id: int
     conversa_id: str | None = None
@@ -1115,6 +1142,39 @@ def gerar_titulo_conversa(primeira_mensagem: str) -> str:
 # ============================================================
 # ROTAS DO HISTÓRICO
 # ============================================================
+
+@app.delete("/conversas")
+def limpar_conversas_usuario(
+    usuario_id: int,
+    usuario_logado: int = Depends(usuario_autenticado),
+    db: Session = Depends(get_db),
+):
+    """Apaga todas as conversas do usuário (usado por Configurações)."""
+
+    if usuario_logado != usuario_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Você só pode apagar o próprio histórico.",
+        )
+
+    conversas = (
+        db.query(Conversa)
+        .filter(Conversa.usuario_id == usuario_id)
+        .all()
+    )
+
+    total = len(conversas)
+
+    for conversa in conversas:
+        db.delete(conversa)
+
+    db.commit()
+
+    return {
+        "sucesso": True,
+        "removidas": total,
+    }
+
 
 @app.get("/conversas/{usuario_id}")
 def listar_conversas(
