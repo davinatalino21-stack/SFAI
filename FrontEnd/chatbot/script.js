@@ -22,33 +22,31 @@ if (chatContainer && "MutationObserver" in window) {
 syncLayoutState();
 
 const sidebarEl = document.querySelector(".sidebar");
-const sidebarCollapseBtn = document.querySelector(".sidebar-collapse");
+const sidebarToggleBtn = document.querySelector(".sidebar-toggle");
 function aplicarEstadoSidebar(colapsado) {
   if (!sidebarEl) return;
   sidebarEl.classList.toggle("collapsed", colapsado);
-  if (sidebarCollapseBtn) {
-    sidebarCollapseBtn.setAttribute("aria-expanded", String(!colapsado));
-    const lbl = sidebarCollapseBtn.querySelector(".nav-label");
-    if (lbl) lbl.textContent = colapsado ? "Expandir" : "Recolher";
+  if (sidebarToggleBtn) {
+    sidebarToggleBtn.setAttribute("aria-expanded", String(!colapsado));
+    sidebarToggleBtn.setAttribute(
+      "aria-label",
+      colapsado ? "Expandir menu" : "Compactar menu",
+    );
+    sidebarToggleBtn.setAttribute(
+      "title",
+      colapsado ? "Expandir menu" : "Compactar menu",
+    );
   }
 }
-function toggleSidebar() {
+function alternarSidebar() {
   if (!sidebarEl) return;
-  const colapsado = !sidebarEl.classList.contains("collapsed");
-  aplicarEstadoSidebar(colapsado);
-  try {
-    localStorage.setItem("sfai_sidebar_collapsed", colapsado ? "1" : "0");
-  } catch (e) {}
+  aplicarEstadoSidebar(!sidebarEl.classList.contains("collapsed"));
 }
 function initSidebar() {
-  let colapsado = false;
-  try {
-    colapsado = localStorage.getItem("sfai_sidebar_collapsed") === "1";
-  } catch (e) {}
-  if (sidebarCollapseBtn) {
-    sidebarCollapseBtn.addEventListener("click", toggleSidebar);
+  if (sidebarToggleBtn) {
+    sidebarToggleBtn.addEventListener("click", alternarSidebar);
   }
-  aplicarEstadoSidebar(colapsado);
+  aplicarEstadoSidebar(false);
 }
 
 const token = localStorage.getItem("token");
@@ -313,7 +311,9 @@ function converterCitacoesEmLinks(texto, fontes) {
   return texto.replace(
     padrao,
     (match, nomeComPagina, pagina, nomeSo, nomeBare) => {
-      const nome = (nomeComPagina || nomeSo || nomeBare || "").trim();
+      const nome = (nomeComPagina || nomeSo || nomeBare || "")
+        .replace(/<[^>]*>/g, "")
+        .trim();
       if (!nome) return match;
 
       let fonte = temFontes ? encontrarFonteCitacao(nome, porNome) : null;
@@ -325,7 +325,14 @@ function converterCitacoesEmLinks(texto, fontes) {
         fonte = { arquivo: nome, pagina: pagina || null };
       }
 
-      const url = montarUrlDocumento(fonte.arquivo, pagina || fonte.pagina);
+      const arquivoSeguro = String(fonte.arquivo || "")
+        .replace(/<[^>]*>/g, "")
+        .trim();
+
+      const url = montarUrlDocumento(
+        arquivoSeguro,
+        pagina || fonte.pagina
+);
       return `<a class="rag-citacao-link" href="${url}" target="_blank" rel="noopener noreferrer">${match}</a>`;
     },
   );
@@ -334,15 +341,18 @@ function converterCitacoesEmLinks(texto, fontes) {
 function formatarRespostaIA(texto, fontes) {
   if (!texto) return "";
 
+  // Primeiro transforma Markdown em HTML
+  texto = texto
+    .replace(/\*\*(.*?)\*\*/gs, "<strong>$1</strong>")
+    .replace(/(?<![\w.])_([^_\n]+?)_(?![\w.])/g, "<em>$1</em>")
+    .replace(/\*(.*?)\*/gs, "<em>$1</em>");
+
+  // Só depois transforma as citações em links
   texto = converterCitacoesEmLinks(texto, fontes);
+
   texto = texto.replace(/^[\s*•-]+\s+/gm, "");
 
-  let formatado = texto
-    .replace(/\*\*(.*?)\*\*/gs, "<strong>$1</strong>")
-    .replace(/_([^_\n]+?)_/g, "<em>$1</em>")
-    .replace(/\*(.*?)\*/g, "<em>$1</em>");
-
-  return formatado
+  return texto
     .split(/\n\n+/)
     .map((bloco) => {
       const linhas = bloco
@@ -355,12 +365,7 @@ function formatarRespostaIA(texto, fontes) {
       }
 
       const conteudo = linhas
-        .map((linha, index) => {
-          if (index === 0) {
-            return `<div class="ans-line">${linha}</div>`;
-          }
-          return `<div class="ans-line">${linha}</div>`;
-        })
+        .map((linha) => `<div class="ans-line">${linha}</div>`)
         .join("");
 
       return `<div class="ans-block">${conteudo}</div>`;
@@ -572,9 +577,7 @@ function renderizarFaq() {
     faqItem.appendChild(category);
 
     faqItem.addEventListener("click", () => {
-      input.value = item.pergunta;
-      enviarMensagem();
-      input.value = "";
+      usarSugestao(item.pergunta);
       fecharFaq();
     });
 
@@ -1048,6 +1051,13 @@ function fecharFaq() {
 
 function usarSugestao(texto) {
   if (!texto) return;
+
+  if (feiraSelecionada) {
+    feiraSelecionada = "";
+    input.placeholder = "O que vamos fazer hoje?";
+    atualizarModoBadge();
+  }
+
   input.value = texto;
   enviarMensagem();
 }
