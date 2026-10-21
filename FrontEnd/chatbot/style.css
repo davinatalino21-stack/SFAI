@@ -1585,3 +1585,30 @@
   }
 }
 
+
+
+
+
+/* Desktop: manter a tela inicial dentro da altura disponível */
+@media (min-width: 933px) {
+  .app-main:not(.state-chat) .composer-shell {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-main:not(.state-chat) .composer-inner {
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .app-main:not(.state-chat) .suggestion-grid {
+    min-height: 0;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+
+
+
