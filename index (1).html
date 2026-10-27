@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#0a1628" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f6f9fc" media="(prefers-color-scheme: light)" />
+    <title>SFAI — Assistente Inteligente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="Theme/theme.js" defer></script>
+    <link rel="stylesheet" href="Theme/theme.css" />
+    <link rel="stylesheet" href="FrontEnd/chatbot/style.css" />
+    <link rel="icon" type="image/png" href="img/favicon.png" />
+    <link rel="stylesheet" href="FrontEnd/chatbot/sfai-home-cards.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <div class="sidebar-header">
+          <button type="button" class="brand" onclick="window.location.href = 'Layout.html'" title="Página inicial">La<span>r</span></button>
+          <button type="button" class="sidebar-toggle" title="Compactar menu" aria-label="Compactar menu" aria-expanded="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        </div>
+        <nav class="sidebar-nav">
+          <button type="button" class="nav-btn" onclick="browser()" title="Histórico de conversas" aria-label="Histórico de conversas">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="nav-label">Histórico</span>
+          </button>
+          <button type="button" class="nav-btn" onclick="toggleFaq()" title="Perguntas frequentes" aria-label="Perguntas frequentes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span class="nav-label">Perguntas frequentes</span>
+          </button>
+        </nav>
+      </aside>
+
+      <div class="app-main">
+        <main class="chat-stage">
+          <section id="chat-container" class="chat-container" aria-label="Mensagens do assistente">
+            <div class="chat-head" id="chatHead" aria-hidden="true"><h1>SF<span>AI</span></h1></div>
+            <div id="chat-area" class="chat-area" tabindex="0" aria-live="polite">
+              <div class="message bot">Olá 👋 Pergunte qualquer coisa sobre as Feiras de Ciências, horários e muito mais!</div>
+            </div>
+            <div id="modeBadge" class="mode-badge" role="button" tabindex="0" title="Clique para desativar"></div>
+          </section>
+        </main>
+
+        <div class="composer-shell" aria-label="Campo de mensagem">
+          <div class="composer-inner">
+            <section class="hero" id="hero">
+              <h1>SF<span>AI</span></h1>
+              <p>Assistente inteligente para ajudar você a organizar seu projeto</p>
+            </section>
+
+            <div class="suggestion-carousel" aria-label="Sugestões de conversa">
+              <button class="suggestion-arrow suggestion-arrow-left" type="button" aria-label="Sugestão anterior" onclick="moverSugestoes(-1)">‹</button>
+              <div class="suggestion-grid" id="suggestionGrid" aria-label="Sugestões de conversa">
+              <button type="button" class="suggestion-card" onclick="usarSugestao('O que são feiras de ciências e como funcionam?')">
+                <span class="suggestion-art art-science" aria-hidden="true"><svg viewBox="0 0 80 64" fill="none"><path d="M29 8h22M34 8v18L19 49c-3 5 0 9 6 9h30c6 0 9-4 6-9L46 26V8" stroke="#2563eb" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 43h30l6 9c1 2 0 4-4 4H24c-3 0-5-2-4-4l5-9Z" fill="#2ec4a6"/><circle cx="36" cy="38" r="3" fill="#2ec4a6"/><circle cx="46" cy="33" r="2" fill="#2563eb"/><path d="M58 14l2 4 4 2-4 2-2 4-2-4-4-2 4-2 2-4Z" fill="#f59e0b"/></svg></span>
+                <span class="suggestion-title">Conhecer as feiras</span><span class="suggestion-description">Entenda como funcionam</span>
+              </button>
+              <button type="button" class="suggestion-card" onclick="usarSugestao('O que é a Mostratec e como participar?')">
+                <span class="suggestion-art art-mostratec" aria-hidden="true"><svg viewBox="0 0 80 64" fill="none"><path d="M27 11h26v10c0 10-5 17-13 17s-13-7-13-17V11Z" fill="#fbbf24" stroke="#b7791f" stroke-width="2.7" stroke-linejoin="round"/><path d="M27 16H15v7c0 8 5 12 14 12M53 16h12v7c0 8-5 12-14 12" stroke="#b7791f" stroke-width="3" stroke-linecap="round"/><path d="M40 38v8m-12 7h24M32 46h16l5 7H27l5-7Z" fill="#f59e0b" stroke="#b7791f" stroke-width="2.7" stroke-linejoin="round"/><path d="m40 16 2.2 4.4 4.8.7-3.5 3.4.8 4.8-4.3-2.3-4.3 2.3.8-4.8-3.5-3.4 4.8-.7L40 16Z" fill="#fff7d6"/></svg></span>
+                <span class="suggestion-title">Mostratec</span><span class="suggestion-description">Conheça a feira e a participação</span>
+              </button>
+              <button type="button" class="suggestion-card" onclick="usarSugestao('Como participar da Febrace?')">
+                <span class="suggestion-art art-febrace" aria-hidden="true"><svg viewBox="0 0 80 64" fill="none"><path d="M40 7c8 10 15 19 15 30a15 15 0 0 1-30 0C25 26 32 17 40 7Z" fill="#818cf8" stroke="#4f46e5" stroke-width="2.5"/><path d="m32 39 8-7 8 7-8 10-8-10Z" fill="#dbeafe"/><path d="M25 48 17 54l1-10m37 4 8 6-1-10" stroke="#2ec4a6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="20" r="3" fill="#f59e0b"/><circle cx="63" cy="14" r="2.5" fill="#ec4899"/><path d="M62 30v8m-4-4h8" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/></svg></span>
+                <span class="suggestion-title">FEBRACE</span><span class="suggestion-description">Inscrição e participação</span>
+              </button>
+              <button type="button" class="suggestion-card" onclick="usarSugestao('Qual o cronograma da Mostratec e da Febrace?')">
+                <span class="suggestion-art art-calendar" aria-hidden="true"><svg viewBox="0 0 80 64" fill="none"><rect x="17" y="13" width="46" height="43" rx="7" fill="#fff" stroke="#3974d8" stroke-width="2.8"/><path d="M17 23h46" stroke="#3974d8" stroke-width="3"/><path d="M29 8v10M51 8v10" stroke="#3974d8" stroke-width="3.5" stroke-linecap="round"/><rect x="26" y="30" width="7" height="6" rx="2" fill="#2ec4a6"/><rect x="37" y="30" width="7" height="6" rx="2" fill="#818cf8"/><rect x="48" y="30" width="7" height="6" rx="2" fill="#f59e0b"/><rect x="26" y="41" width="7" height="6" rx="2" fill="#818cf8"/><rect x="37" y="41" width="7" height="6" rx="2" fill="#2ec4a6"/><path d="m48 44 3 3 6-7" stroke="#ec4899" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="suggestion-title">Cronogramas</span><span class="suggestion-description">Etapas e datas importantes</span>
+              </button>
+              <button type="button" class="suggestion-card" onclick="usarSugestao('Como posso classificar meu projeto para uma feira de ciências?')">
+                <span class="suggestion-art art-classify" aria-hidden="true"><svg viewBox="0 0 80 64" fill="none"><rect x="13" y="18" width="35" height="34" rx="5" fill="#bfdbfe" stroke="#2563eb" stroke-width="2.5"/><path d="M13 26h35" stroke="#2563eb" stroke-width="2.5"/><rect x="31" y="10" width="36" height="38" rx="5" fill="#fff" stroke="#0f9f86" stroke-width="2.7"/><path d="M39 20h19M39 27h13M39 34h8" stroke="#0f9f86" stroke-width="2.7" stroke-linecap="round"/><circle cx="58" cy="43" r="10" fill="#2ec4a6" stroke="#fff" stroke-width="2"/><path d="m53 43 3.5 3.5L63 39" stroke="#fff" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="suggestion-title">Classificar projeto</span><span class="suggestion-description">Encontre a área científica</span>
+              </button>
+              <button type="button" class="suggestion-card" onclick="usarSugestao('Sugira ideias de projetos científicos para estudantes.')">
+                <span class="suggestion-art art-ideas" aria-hidden="true"><svg viewBox="0 0 80 64" fill="none"><path d="M40 8a18 18 0 0 0-11 32c3 2 4 5 4 8h14c0-3 1-6 4-8A18 18 0 0 0 40 8Z" fill="#fde68a" stroke="#d97706" stroke-width="2.7"/><path d="M33 51h14M35 56h10" stroke="#d97706" stroke-width="3" stroke-linecap="round"/><path d="M40 17v8m-5 5 5-5 5 5" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 21l2 4 4 2-4 2-2 4-2-4-4-2 4-2 2-4ZM64 9l1.5 3 3 1.5-3 1.5-1.5 3-1.5-3-3-1.5 3-1.5L64 9Z" fill="#ec4899"/></svg></span>
+                <span class="suggestion-title">Ideias de pesquisa</span><span class="suggestion-description">Inspire-se para começar</span>
+              </button>
+              <button type="button" class="suggestion-card" onclick="usarSugestao('Como estruturar a metodologia de um projeto científico?')">
+                <span class="suggestion-art art-method" aria-hidden="true"><svg viewBox="0 0 80 64" fill="none"><path d="m24 12 7-5 13 15-7 6-13-16Z" fill="#93c5fd" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/><path d="m38 27 7-6 8 9-7 6-8-9Z" fill="#c4b5fd" stroke="#6366f1" stroke-width="2.5" stroke-linejoin="round"/><path d="M41 33 29 45a12 12 0 0 0 17 0l5-5M29 45l-7 7" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/><path d="M50 35h13M56 35v9M47 52h19" stroke="#0f9f86" stroke-width="3" stroke-linecap="round"/><circle cx="25" cy="54" r="5" fill="#2ec4a6"/><circle cx="64" cy="16" r="4" fill="#f59e0b"/></svg></span>
+                <span class="suggestion-title">Metodologia</span><span class="suggestion-description">Organize sua investigação</span>
+              </button>
+              <button type="button" class="suggestion-card" onclick="usarSugestao('Como escrever um bom resumo para uma feira de ciências?')">
+                <span class="suggestion-art art-summary" aria-hidden="true"><svg viewBox="0 0 80 64" fill="none"><path d="M22 7h27l12 12v35a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4Z" fill="#fff" stroke="#8b5cf6" stroke-width="2.7" stroke-linejoin="round"/><path d="M49 7v13h12" stroke="#8b5cf6" stroke-width="2.7" stroke-linejoin="round"/><path d="M27 29h24M27 36h24M27 43h15" stroke="#c4b5fd" stroke-width="3" stroke-linecap="round"/><path d="m49 47 10-10 6 6-10 10-7 1 1-7Z" fill="#f9a8d4" stroke="#db2777" stroke-width="2.5" stroke-linejoin="round"/><path d="m59 37 3-3a3 3 0 0 1 4 4l-3 3" fill="#fce7f3" stroke="#db2777" stroke-width="2.2"/></svg></span>
+                <span class="suggestion-title">Resumo científico</span><span class="suggestion-description">Apresente sua ideia com clareza</span>
+              </button>
+              </div>
+              <button class="suggestion-arrow suggestion-arrow-right" type="button" aria-label="Próxima sugestão" onclick="moverSugestoes(1)">›</button>
+            </div>
+
+            <div class="input-area">
+              <div class="feira-selector">
+                <button type="button" class="options-input-area" onclick="toggleFeiraPopup()" aria-haspopup="true" aria-expanded="false" id="feiraToggle" title="Classificar para uma feira" aria-label="Escolher feira">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <div class="feira-popup" id="feiraPopup" role="menu">
+                  <p class="feira-popup-title">Classificar para</p>
+                  <button type="button" class="botao" role="menuitem" onclick="selecionarFeira('FEBRACE')">Febrace</button>
+                  <button type="button" class="botao" role="menuitem" onclick="selecionarFeira('MOSTRATEC')">Mostratec</button>
+                  <button type="button" class="botao" role="menuitem" onclick="selecionarFeira('Ciências para Todos')">Ciências para Todos</button>
+                  <button type="button" class="botao" role="menuitem" onclick="selecionarFeira('12ª DIREC')">12ª DIREC</button>
+                </div>
+              </div>
+              <div class="input-text">
+                <textarea id="user-input" class="user-input" placeholder="aperte no &quot;+&quot; e classifique seu projeto!" autocomplete="off" aria-label="Escreva sua mensagem"></textarea>
+              </div>
+              <button type="button" class="send-btn" onclick="enviarMensagem()" aria-label="Enviar mensagem">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span>Enviar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <footer class="app-footer"><span>SFAI • Assistente de Feira de Ciências</span><a href="knowMore.html?msg=index">Saiba mais</a></footer>
+      </div>
+
+      <button type="button" id="drawerBackdrop" class="drawer-backdrop" aria-label="Fechar painel" tabindex="-1"></button>
+      <aside id="hist" class="drawer" aria-label="Histórico de conversas">
+        <div class="drawer-header">
+          <div class="drawer-title">
+            <button type="button" class="drawer-back" onclick="fecharPainéis()" aria-label="Fechar painel" title="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><h3>Histórico de conversas</h3>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnNewChat" title="Nova conversa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nova conversa</button>
+        </div>
+        <div class="hist-list" id="histList"></div>
+        <div class="hist-empty" id="histEmpty" style="display:none"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Nenhuma conversa ainda.<br />Comece a conversar no chat!</p></div>
+      </aside>
+
+      <aside id="faqPanel" class="drawer" aria-label="Perguntas frequentes">
+        <div class="drawer-header"><div class="drawer-title">
+          <button type="button" class="drawer-back" onclick="fecharPainéis()" aria-label="Fechar painel" title="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><h3>Perguntas frequentes</h3>
+        </div></div>
+        <p class="drawer-subtitle">Toque em uma pergunta para perguntar ao assistente.</p>
+        <div class="hist-list faq-list" id="faqList"></div>
+      </aside>
+    </div>
+
+    <div id="user-menu-widget" class="user-menu-widget" aria-label="Menu do usuário">
+      <button id="userMenuButton" class="user-menu-button" type="button" aria-expanded="false" aria-haspopup="true" aria-label="Abrir menu do usuário"><span id="userMenuIcon" class="user-menu-icon user-menu-initials"></span></button>
+      <div id="userMenuDropdown" class="user-menu-dropdown" role="menu" aria-hidden="true">
+        <div class="user-menu-header"><div id="userMenuHeaderAvatar" class="user-menu-header-avatar"></div><div id="userMenuName" class="user-menu-name"></div><div id="userMenuEmail" class="user-menu-email"></div></div>
+        <div class="user-menu-actions">
+          <button class="user-menu-item" type="button" role="menuitem" data-action="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><span class="user-menu-item-title">Meu Perfil</span></button>
+          <button class="user-menu-item" type="button" role="menuitem" data-action="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="user-menu-item-title">Configurações</span></button>
+          <button class="user-menu-item user-menu-item-danger" type="button" role="menuitem" data-action="logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span class="user-menu-item-title">Sair</span></button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function moverSugestoes(direcao) {
+        const trilha = document.getElementById('suggestionGrid');
+        if (!trilha) return;
+        const cartao = trilha.querySelector('.suggestion-card');
+        if (!cartao) return;
+        const estilo = getComputedStyle(trilha);
+        const passo = cartao.getBoundingClientRect().width + parseFloat(estilo.gap || estilo.columnGap || 0);
+        trilha.scrollBy({ left: direcao * passo, behavior: 'smooth' });
+      }
+    </script>
+    <script src="Theme/account.js" defer></script>
+    <script src="Theme/preferences.js" defer></script>
+    <script src="FrontEnd/chatbot/script.js" defer></script>
+  </body>
+</html>
