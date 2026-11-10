@@ -1,0 +1,299 @@
+/* Tela inicial: identidade no topo, cartões ilustrados no centro e entrada na base. */
+.app-main:not(.state-chat) .composer-shell {
+  padding: 20px clamp(16px, 4vw, 54px) 24px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.app-main:not(.state-chat) .composer-inner {
+  width: min(1060px, 100%);
+  height: 100%;
+  min-height: 620px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 18px;
+}
+.app-main:not(.state-chat) .hero { padding-top: 2px; text-align: center; }
+.app-main:not(.state-chat) .hero h1 {
+  font-size: clamp(2.2rem, 4.4vw, 3rem);
+  line-height: 1.1;
+}
+.app-main:not(.state-chat) .hero > p {
+  margin-top: 7px;
+  max-width: 560px;
+  font-size: clamp(.88rem, 1.3vw, 1rem);
+}
+.suggestion-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  min-height: 0;
+}
+.suggestion-card {
+  appearance: none;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 13px 12px 14px;
+  overflow: hidden;
+  text-align: center;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.suggestion-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 12px 28px rgba(12, 27, 42, .13);
+  background: var(--surface-strong);
+}
+.suggestion-card:active { transform: translateY(-1px) scale(.99); }
+.suggestion-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.suggestion-art {
+  width: 100%;
+  min-height: 64px;
+  flex: 0 0 82px;
+  max-height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  overflow: hidden;
+  background: var(--art-bg, linear-gradient(135deg, #e6f7f3, #e8efff));
+}
+.suggestion-art svg {
+  width: min(76px, 76%);
+  height: min(76px, 76%);
+  min-height: 52px;
+  overflow: visible;
+  filter: drop-shadow(0 5px 4px rgba(15, 35, 70, .08));
+}
+.art-science { --art-bg: linear-gradient(135deg, #e2f8f1, #e4efff); }
+.art-mostratec { --art-bg: linear-gradient(135deg, #fff1c9, #ffe4dd); }
+.art-febrace { --art-bg: linear-gradient(135deg, #e7e8ff, #e1f5ff); }
+.art-calendar { --art-bg: linear-gradient(135deg, #dff5ff, #e9e7ff); }
+.art-classify { --art-bg: linear-gradient(135deg, #d9f7ec, #e5f4ff); }
+.art-ideas { --art-bg: linear-gradient(135deg, #fff3c8, #ffe6ee); }
+.art-method { --art-bg: linear-gradient(135deg, #e0ecff, #e2f7ee); }
+.art-summary { --art-bg: linear-gradient(135deg, #ffe8e1, #f0e7ff); }
+.suggestion-title {
+  display: block;
+  width: 100%;
+  font-size: clamp(.84rem, 1.1vw, .98rem);
+  font-weight: 750;
+  line-height: 1.25;
+}
+.suggestion-description {
+  display: block;
+  max-width: 210px;
+  color: var(--text-secondary);
+  font-size: clamp(.72rem, .95vw, .82rem);
+  line-height: 1.35;
+}
+.app-main:not(.state-chat) .composer-inner .input-area {
+  width: 100%;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+.app-main:not(.state-chat) .composer-inner .input-text { align-self: center; border-radius: 14px; }
+.app-main:not(.state-chat) .composer-inner .input-text textarea { min-height: 46px; max-height: 120px; }
+.app-main.state-chat .suggestion-grid { display: none; }
+
+@media (max-width: 932px) {
+  .app-main:not(.state-chat) .composer-shell { padding: 14px 14px 18px; }
+  .app-main:not(.state-chat) .composer-inner {
+    height: auto;
+    min-height: 100%;
+    grid-template-rows: auto auto auto;
+    gap: 15px;
+    margin: auto;
+  }
+  .app-main:not(.state-chat) .hero { padding-top: 4px; }
+  .suggestion-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+    grid-auto-rows: minmax(124px, auto);
+    gap: 10px;
+  }
+  .suggestion-card { gap: 7px; padding: 10px; border-radius: 15px; }
+  .suggestion-art { flex: 0 0 57px; min-height: 57px; max-height: 57px; }
+  .suggestion-art svg { width: 54px; height: 54px; min-height: 0; }
+  .suggestion-title { font-size: .84rem; }
+  .suggestion-description { font-size: .72rem; }
+  .app-main:not(.state-chat) .composer-inner .input-area { gap: 8px; padding: 9px; }
+  .app-main:not(.state-chat) .composer-inner .input-text textarea { min-height: 42px; padding: 10px; }
+}
+@media (max-width: 380px) {
+  .suggestion-grid { gap: 8px; }
+  .suggestion-card { padding: 8px; }
+  .suggestion-description { font-size: .68rem; }
+}
+
+/* Ajustes finais já existentes no projeto: preservam o composer transparente. */
+.app-main:not(.state-chat) .composer-shell {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
+.app-main:not(.state-chat) .composer-inner .input-area {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 8px 0 !important;
+}
+.app-main:not(.state-chat) .composer-inner { min-height: 0; }
+
+/* Carrossel: perspectiva 3D, navegação circular e cartões clonados pelo JavaScript. */
+.suggestion-carousel {
+  --suggestion-card-width: clamp(220px, 28vw, 290px);
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 250px;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  isolation: isolate;
+  perspective: 1100px;
+  perspective-origin: 50% 45%;
+}
+.suggestion-grid {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  align-items: center;
+  gap: 14px;
+  padding: 24px max(12px, calc((100% - var(--suggestion-card-width)) / 2));
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  transform-style: preserve-3d;
+  overscroll-behavior-x: contain;
+}
+.suggestion-grid::-webkit-scrollbar { display: none; }
+.suggestion-card {
+  flex: 0 0 var(--suggestion-card-width);
+  width: var(--suggestion-card-width);
+  min-width: var(--suggestion-card-width);
+  min-height: 220px;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  transform-origin: center center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, opacity, filter;
+  transition:
+    transform .62s cubic-bezier(.2,.75,.25,1),
+    opacity .62s ease,
+    filter .62s ease,
+    box-shadow .35s ease,
+    border-color .35s ease;
+}
+.suggestion-card.is-carousel-center {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow: 0 18px 38px rgba(12, 27, 42, .18);
+}
+.suggestion-arrow {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text);
+  background: var(--surface-strong, var(--surface));
+  box-shadow: var(--shadow);
+  font: inherit;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .94;
+  transition: opacity .18s ease, transform .18s ease, background .18s ease;
+}
+.suggestion-arrow:hover {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.08);
+  background: var(--surface);
+}
+.suggestion-arrow:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.suggestion-arrow-left { left: 8px; }
+.suggestion-arrow-right { right: 8px; }
+
+@media (max-width: 932px) {
+  .app-main:not(.state-chat) .composer-shell {
+    padding: 8px 10px 12px !important;
+    overflow: hidden;
+  }
+  .app-main:not(.state-chat) .composer-inner {
+    min-height: 0;
+    height: 100%;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+  .app-main:not(.state-chat) .composer-inner .input-area {
+    padding: 6px 0 !important;
+  }
+  .suggestion-carousel {
+    --suggestion-card-width: min(72vw, 260px);
+    min-height: 220px;
+  }
+  .suggestion-grid {
+    gap: 12px;
+    padding-top: 16px;
+    padding-bottom: 22px;
+  }
+  .suggestion-card {
+    min-height: 190px;
+    padding: 10px;
+  }
+  .suggestion-art {
+    flex-basis: 62px;
+    min-height: 62px;
+    max-height: 62px;
+  }
+  .suggestion-art svg { width: 58px; height: 58px; }
+  .suggestion-arrow {
+    width: 36px;
+    height: 36px;
+    font-size: 28px;
+  }
+  .suggestion-arrow-left { left: 3px; }
+  .suggestion-arrow-right { right: 3px; }
+}
+@media (max-width: 380px) {
+  .suggestion-carousel { --suggestion-card-width: min(76vw, 245px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .suggestion-grid { scroll-behavior: auto; }
+  .suggestion-card, .suggestion-arrow { transition: none !important; }
+}
