@@ -104,18 +104,36 @@
       frameAtualizacao = requestAnimationFrame(atualizarProfundidade);
     }
 
-    function centralizarCard(indice, comportamento = "smooth") {
-      const card = cards[indice];
-      if (!card) return;
+    
+function centralizarCard(indice, comportamento = "smooth") {
+  const card = cards[indice];
+  if (!card) return;
 
-      const trackRect = track.getBoundingClientRect();
-      const alvo = card.getBoundingClientRect().left -
-        trackRect.left + track.scrollLeft +
-        card.offsetWidth / 2 - track.clientWidth / 2;
+  const trackRect = track.getBoundingClientRect();
+  const alvo = card.getBoundingClientRect().left -
+    trackRect.left + track.scrollLeft +
+    card.offsetWidth / 2 - track.clientWidth / 2;
 
-      track.scrollTo({ left: alvo, behavior: comportamento });
-      solicitarAtualizacao();
-    }
+  if (comportamento === "smooth") {
+    track.scrollTo({ left: alvo, behavior: "smooth" });
+  } else {
+    // Desativa temporariamente a rolagem suave.
+    const comportamentoAnterior = track.style.scrollBehavior;
+    track.style.scrollBehavior = "auto";
+
+    // Reposiciona instantaneamente.
+    track.scrollLeft = alvo;
+
+    // Força a aplicação da nova posição.
+    void track.offsetWidth;
+
+    // Restaura o comportamento anterior.
+    track.style.scrollBehavior = comportamentoAnterior;
+  }
+
+  solicitarAtualizacao();
+}
+
 
     function normalizarExtremos() {
       const indice = indiceMaisProximo();
