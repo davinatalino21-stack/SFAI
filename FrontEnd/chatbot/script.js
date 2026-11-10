@@ -732,16 +732,28 @@ async function abrirConversa(conversaId) {
   fecharFaq();
 }
 
+
 function novaConversa() {
   conversaAtualId = null;
   chatMessages = [];
   historicoConversa = [];
+
   chatArea.innerHTML = `<div class="message bot">Olá 👋 Pergunte qualquer coisa sobre as Feiras de Ciências, Horários e muito mais!</div>`;
 
   const chatAra = document.getElementById("hero");
 
-  if (chatAra) chatAra.style.display = "block";
-  if (chatContainer) chatContainer.classList.remove("expanded");
+  if (chatAra) {
+    chatAra.classList.remove("fade-out1");
+    chatAra.style.display = "block";
+  }
+
+  if (chatContainer) {
+    chatContainer.classList.remove("expanded");
+  }
+
+  // Restaura o rodapé em telas menores.
+  const footer = document.querySelector("footer");
+  if (footer) footer.style.display = "";
 
   primeiravez = true;
   input.value = "";
