@@ -297,3 +297,8 @@
   .suggestion-grid { scroll-behavior: auto; }
   .suggestion-card, .suggestion-arrow { transition: none !important; }
 }
+
+/* Oculta todo o carrossel durante uma conversa ativa */
+.app-main.state-chat .suggestion-carousel {
+  display: none !important;
+}
