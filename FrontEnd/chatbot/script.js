@@ -338,11 +338,44 @@ function encontrarFonteCitacao(nome, porNome) {
   return null;
 }
 
+
 function converterCitacoesEmLinks(texto, fontes) {
   if (!texto) return texto;
 
   const temFontes = Array.isArray(fontes) && fontes.length > 0;
 
+  // 1. Converte citações numeradas: (Fonte 2 – título, p. 27)
+  if (temFontes) {
+    texto = texto.replace(
+      /\(\s*Fonte\s*(\d+)\b[^)]*\)/gi,
+      (match, numero, offset, original) => {
+        // Evita criar links dentro de outros links.
+        const antes = original.slice(0, offset);
+        if (antes.lastIndexOf("<a") > antes.lastIndexOf("</a>")) {
+          return match;
+        }
+
+        const indice = Number(numero) - 1;
+        const fonte = fontes[indice];
+
+        if (!fonte || !fonte.arquivo) return match;
+
+        const paginaMatch = match.match(
+          /\b(?:p\.?|pág\.?|página|pagina)\s*(\d+)/i
+        );
+
+        const pagina = paginaMatch
+          ? paginaMatch[1]
+          : fonte.pagina;
+
+        const url = montarUrlDocumento(fonte.arquivo, pagina);
+
+        return `<a class="rag-citacao-link" href="${url}" target="_blank" rel="noopener noreferrer">${match}</a>`;
+      }
+    );
+  }
+
+  // 2. Mantém o reconhecimento de citações com nome explícito do PDF.
   const porNome = new Map();
   const nomesEscapados = [];
 
@@ -351,18 +384,69 @@ function converterCitacoesEmLinks(texto, fontes) {
       const arquivo = fonte.arquivo || "";
       const semExt = arquivo.replace(/\.pdf$/i, "");
 
-      porNome.set(arquivo.toLowerCase(), fonte);
-      porNome.set(semExt.toLowerCase(), fonte);
       porNome.set(normalizarNome(arquivo), fonte);
       porNome.set(normalizarNome(semExt), fonte);
 
-      [arquivo, semExt, normalizarNome(arquivo), normalizarNome(semExt)].forEach(
-        (nome) => {
-          nomesEscapados.push(nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-        },
-      );
+      [arquivo, semExt].forEach((nome) => {
+        if (nome) {
+          nomesEscapados.push(
+            nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+          );
+        }
+      });
     });
   }
+
+  const nomesUnicos = [...new Set(nomesEscapados)];
+  nomesUnicos.sort((a, b) => b.length - a.length);
+
+  const padraoNomes = nomesUnicos.length
+    ? `|(${nomesUnicos.join("|")})`
+    : "";
+
+  const padrao = new RegExp(
+    `\\(([^()]*?)\\s*,\\s*(?:p\\.?|p[áa]g\\.?|p[áa]gina|pagina)\\s*(\\d+)\\)` +
+    `|\\(([^()]*?)\\)` +
+    padraoNomes,
+    "gi"
+  );
+
+  return texto.replace(
+    padrao,
+    (match, nomeComPagina, pagina, nomeSo, nomeBare, offset, original) => {
+      const antes = original.slice(0, offset);
+      if (antes.lastIndexOf("<a") > antes.lastIndexOf("</a>")) {
+        return match;
+      }
+
+      const nome = (nomeComPagina || nomeSo || nomeBare || "")
+        .replace(/<[^>]*>/g, "")
+        .trim();
+
+      if (!nome) return match;
+
+      const fonte = temFontes
+        ? encontrarFonteCitacao(nome, porNome)
+        : null;
+
+      if (!fonte) {
+        if (!/\.pdf\s*$/i.test(nome)) return match;
+      }
+
+      const arquivo = fonte
+        ? fonte.arquivo
+        : nome;
+
+      const url = montarUrlDocumento(
+        arquivo,
+        pagina || (fonte && fonte.pagina)
+      );
+
+      return `<a class="rag-citacao-link" href="${url}" target="_blank" rel="noopener noreferrer">${match}</a>`;
+    }
+  );
+}
+
 
   const nomesUnicos = [...new Set(nomesEscapados)];
   nomesUnicos.sort((a, b) => b.length - a.length);
