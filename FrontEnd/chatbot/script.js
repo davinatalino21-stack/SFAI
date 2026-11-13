@@ -411,13 +411,11 @@ function converterCitacoesEmLinks(texto, fontes) {
 function formatarRespostaIA(texto, fontes) {
   if (!texto) return "";
 
-  // Primeiro transforma Markdown em HTML
   texto = texto
     .replace(/\*\*(.*?)\*\*/gs, "<strong>$1</strong>")
     .replace(/(?<![\w.])_([^_\n]+?)_(?![\w.])/g, "<em>$1</em>")
     .replace(/\*(.*?)\*/gs, "<em>$1</em>");
 
-  // Só depois transforma as citações em links
   texto = converterCitacoesEmLinks(texto, fontes);
 
   texto = texto.replace(/^[\s*•-]+\s+/gm, "");
@@ -435,7 +433,17 @@ function formatarRespostaIA(texto, fontes) {
       }
 
       const conteudo = linhas
-        .map((linha) => `<div class="ans-line">${linha}</div>`)
+        .map((linha) => {
+          const titulo = linha.match(/^(#{1,6})\s+(.+)$/);
+
+          if (titulo) {
+            const nivel = Math.min(titulo[1].length, 3);
+
+            return `<div class="ans-heading ans-heading-${nivel}">${titulo[2]}</div>`;
+          }
+
+          return `<div class="ans-line">${linha}</div>`;
+        })
         .join("");
 
       return `<div class="ans-block">${conteudo}</div>`;
