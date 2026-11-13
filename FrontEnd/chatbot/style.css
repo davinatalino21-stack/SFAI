@@ -1351,6 +1351,24 @@
   overflow: visible;
 }
 
+.ans-heading {
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 10px 0 4px;
+}
+
+.ans-heading-1 {
+  font-size: 1.15em;
+}
+
+.ans-heading-2 {
+  font-size: 1.08em;
+}
+
+.ans-heading-3 {
+  font-size: 1em;
+}
+
 .app-main.state-chat .composer-inner {
   width: min(760px, 100%);
   gap: 0;
