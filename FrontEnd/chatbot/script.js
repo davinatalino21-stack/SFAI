@@ -308,12 +308,13 @@ function sleep(ms) {
 
 function normalizarNome(texto) {
   return String(texto || "")
+    .replace(/^\s*fonte\s*:\s*/i, "")
+    .replace(/[\u2010-\u2015\u2212]/g, "-")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
 }
-
 function encontrarFonteCitacao(nome, porNome) {
   const n = normalizarNome(nome);
   if (!n) return null;
