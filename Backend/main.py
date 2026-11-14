@@ -770,8 +770,6 @@ def gerar_texto(
         # e pelo isolamento do RAG em perguntas temporais de feiras.
         parametros["search_settings"] = {
             "country": "brazil",
-            # Evita blogs pessoais como fonte de primeira linha em pesquisas gerais.
-            "exclude_domains": ["blogspot.com"],
             "include_images": False,
         }
         # reasoning_effort=low reduz explorações longas da Browser Search.
