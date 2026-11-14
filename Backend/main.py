@@ -2008,6 +2008,7 @@ def classificar_resumo_api(
             prompt_conversa += (
                 "\n\nPESQUISA TEMPORAL PRIORITÁRIA:\n"
                 f"- Data de referência: {data_hora_atual_brasil()}.\n"
+                f"- Ano da edição que deve ser verificada: {datetime.now(ZoneInfo('America/Sao_Paulo')).year}.\n"
                 "- A pergunta trata do calendário vigente de uma feira.\n"
                 "- Use Browser Search obrigatoriamente e priorize o site oficial da organização.\n"
                 "- Confirme explicitamente o ano/edição a que a data se refere.\n"
