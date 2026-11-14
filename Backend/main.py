@@ -380,10 +380,22 @@ SYSTEM_PROMPT_CHAT_RAG = (
     "verificar. Nunca invente datas, preços, números, links ou fontes.\n"
     "4. Quando combinar documentos internos e pesquisa web, diferencie claramente "
     "o que veio dos documentos do que foi verificado na internet.\n"
-    "5. Para perguntas gerais, conceituais e saudações, responda sem consultar fontes "
-    "desnecessariamente.\n"
-    "6. Não crie uma seção final manual de fontes ou links. O backend anexa os metadados "
-    "reais dos documentos recuperados e dos sites visitados. Não diga que pesquisou "
+    "5. REGRA CRÍTICA DE ATUALIDADE: para datas de inscrição, prazos, cronogramas, "
+    "calendários e edição vigente de feiras, a pesquisa web é a fonte de verdade. "
+    "Nunca use uma data encontrada em PDF/RAG como se fosse atual. Documentos internos "
+    "podem estar desatualizados; trate datas neles como históricas, a menos que o próprio "
+    "documento identifique explicitamente a edição vigente e isso seja confirmado por "
+    "uma fonte oficial atual na web.\\n"
+    "6. Ao pesquisar datas de feiras, procure primeiro o calendário/edital da edição "
+    "vigente no site oficial da organização. Confira o ano da edição e o contexto da "
+    "data (publicação do documento, abertura das inscrições, encerramento ou evento); "
+    "não confunda essas datas. Se fontes oficiais não confirmarem o período vigente, "
+    "não forneça uma data como certa: diga que não conseguiu verificá-la. Se houver "
+    "conflito, prefira a página oficial atual e explique a divergência brevemente.\\n"
+    "7. Para perguntas gerais, conceituais e saudações, responda sem consultar fontes "
+    "desnecessariamente.\\n"
+    "8. Não crie uma seção final manual de fontes ou links. O backend anexa os metadados "
+    "reais dos documentos recuperados e dos sites visitados.    "reais dos documentos recuperados e dos sites visitados. Não diga que pesquisou "
     "na internet se a ferramenta não foi executada.\n\n"
     "CONCISÃO E FORMATO DAS RESPOSTAS:\n"
     "Seja direto e proporcional à pergunta. Para perguntas simples, responda em 1 a 4 "
@@ -471,6 +483,29 @@ def pergunta_exige_busca_web(mensagem: str, contexto_conversa: str = "") -> bool
     ]
 
     return any(re.search(padrao, texto, flags=re.IGNORECASE) for padrao in padroes_externos)
+
+
+def pergunta_exige_calendario_atual(mensagem: str, contexto_conversa: str = "") -> bool:
+    """Detecta perguntas sobre datas vigentes de inscrições e eventos de feiras.
+
+    Nessas perguntas, o RAG é desativado para impedir que datas de edições
+    antigas concorram com as evidências encontradas na pesquisa web.
+    """
+    texto = f"{contexto_conversa or ''} {mensagem or ''}".lower()
+
+    menciona_feira = bool(re.search(
+        r"\\b(febrace|mostratec|feira(?:s)? de ci[eê]ncias?)\\b",
+        texto,
+        flags=re.IGNORECASE,
+    ))
+    pergunta_temporal = bool(re.search(
+        r"\\b(inscri[cç][aã]o|inscri[cç][oõ]es|prazo|cronograma|calend[aá]rio|"
+        r"edital|data(?:s)?|per[ií]odo|edi[cç][aã]o|abertura|encerramento|"
+        r"submiss[aã]o|come[cç]a|termina)\\b",
+        texto,
+        flags=re.IGNORECASE,
+    ))
+    return menciona_feira and pergunta_temporal
 
 
 def _obter_campo(objeto, nome: str, padrao=None):
@@ -592,6 +627,10 @@ def gerar_texto(
 
     if usar_browser_search:
         parametros["tools"] = [{"type": "browser_search"}]
+        # Prioriza resultados brasileiros. A Browser Search da Groq não oferece
+        # filtro de recência configurável; a atualidade é reforçada pelo prompt
+        # e pelo isolamento do RAG em perguntas temporais de feiras.
+        parametros["search_settings"] = {"country": "brazil"}
         # 'required' força a chamada em perguntas externas identificadas;
         # 'auto' deixa o modelo decidir nas demais perguntas do chat.
         parametros["tool_choice"] = "required" if forcar_busca_web else "auto"
@@ -1930,18 +1969,23 @@ def classificar_resumo_api(
         contexto_roteador = perguntas_anteriores[-1] if perguntas_anteriores else ""
 
         # O roteador evita gerar embedding/consultar PDFs em perguntas gerais.
+        pergunta_calendario_atual = pergunta_exige_calendario_atual(
+            mensagem,
+            contexto_conversa=contexto_roteador,
+        )
         exige_rag = pergunta_exige_rag(
             mensagem,
             feira_selecionada,
             contexto_conversa=contexto_roteador,
-        )
+        ) and not pergunta_calendario_atual
         exige_busca_web = pergunta_exige_busca_web(
             mensagem,
             contexto_conversa=contexto_roteador,
         )
         print(
             f"[FONTES] rag={exige_rag} | browser_search={exige_busca_web} | "
-            f"feira={feira_selecionada or 'não selecionada'}"
+            f"feira={feira_selecionada or 'não selecionada'} | "
+            f"calendario_atual={pergunta_calendario_atual}"
         )
 
         resultados_rag = []
@@ -1960,6 +2004,16 @@ def classificar_resumo_api(
             resultados_rag=resultados_rag,
             rag_consultado=exige_rag,
         )
+        if pergunta_calendario_atual:
+            prompt_conversa += (
+                "\\n\\nPESQUISA TEMPORAL PRIORITÁRIA:\\n"
+                f"- Data de referência: {data_hora_atual_brasil()}.\\n"
+                "- A pergunta trata do calendário vigente de uma feira.\\n"
+                "- Use Browser Search obrigatoriamente e priorize o site oficial da organização.\\n"
+                "- Confirme explicitamente o ano/edição a que a data se refere.\\n"
+                "- Não use datas de PDFs, materiais de apoio ou edições antigas como resposta atual.\\n"
+                "- Se não encontrar confirmação oficial da edição vigente, informe que não foi possível verificar.\\n"
+            )
 
         resposta_gerada = gerar_texto(
             prompt_conversa,
