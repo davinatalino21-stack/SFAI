@@ -1019,68 +1019,6 @@ const perguntasFrequentes = [
   { pergunta: "Qual o cronograma da Ciências para Todos?", categoria: "Cronograma" },
 ];
 
-const cronogramas = {
-  mostratec: [
-    "📅 Cronograma MOSTRATEC 2026",
-    "",
-    "• Afiliação de feiras: 01/05 a 31/05",
-    "• Submissão direta de projetos: 01/07 a 31/07",
-    "• Inscrição de projetos credenciados por feiras afiliadas (realizadas até 30/06): até 31/07",
-    "• Inscrição de projetos credenciados por feiras afiliadas (realizadas em 07/2026): até 31/08",
-    "• Inscrição de projetos credenciados por feiras afiliadas (realizadas entre 08/2026 e 28/09/2026): até 30/09",
-    "• Divulgação dos projetos selecionados: 01/09",
-    "• Divulgação dos finalistas: 06/10",
-    "• Envio do relatório científico (somente Ensino Médio e Técnico): até 14/10",
-    "• Pagamento das inscrições: até 19/10",
-    "• Realização da feira: 26/10 a 30/10",
-    "",
-    "ℹ️ Projetos credenciados por feiras afiliadas possuem vaga garantida desde que cumpram todas as exigências do regulamento. Apenas projetos do Ensino Médio e Técnico enviam relatório científico.",
-  ].join("\n"),
-  febrace: [
-    "📅 Cronograma FEBRACE 2027",
-    "",
-    "• Abertura das inscrições dos projetos: 22/06/2026",
-    "• Início da afiliação e renovação de feiras: 01/07/2026",
-    "• Encerramento da afiliação de feiras: 31/08/2026 (18h)",
-    "• Divulgação das feiras afiliadas: 22/09/2026",
-    "• Prazo final para envio dos projetos: 20/10/2026 (18h)",
-    "• Divulgação dos finalistas: 18/12/2026 (14h)",
-    "• Prazo final para confirmação dos finalistas: 12/02/2027",
-    "• Mostra Presencial: 15/03 a 19/03/2027",
-    "• Cerimônia de Premiação: 19/03/2027",
-    "",
-    "ℹ️ A FEBRACE acontece anualmente no mês de março. Projetos podem participar por submissão direta ou através de feiras afiliadas.",
-  ].join("\n"),
-  direc: [
-    "📅 Cronograma 12ª DIREC",
-    "",
-    "ℹ️ A 12ª DIREC não possui calendário fixo nacional.",
-    "",
-    "• O cronograma é divulgado anualmente pela SEEC/RN.",
-    "• Normalmente a feira regional ocorre entre agosto e setembro.",
-    "• Os projetos classificados podem receber credenciamento para feiras estaduais e nacionais, dependendo da edição.",
-  ].join("\n"),
-  ciencias: [
-    "📅 Cronograma Ciências para Todos",
-    "",
-    "ℹ️ A Ciências para Todos não possui calendário oficial fixo.",
-    "",
-    "• O cronograma é divulgado anualmente pela organização da feira.",
-    "• Normalmente ocorre durante o segundo semestre.",
-    "• As datas variam conforme o edital publicado.",
-  ].join("\n"),
-};
-
-function detectarCronograma(texto) {
-  const t = texto.toLowerCase();
-  if (!t.includes("cronograma")) return null;
-  if (t.includes("mostratec")) return cronogramas.mostratec;
-  if (t.includes("febrace")) return cronogramas.febrace;
-  if (t.includes("direc")) return cronogramas.direc;
-  if (t.includes("ciência") || t.includes("ciencias") || t.includes("para todos")) return cronogramas.ciencias;
-  return null;
-}
-
 async function carregarConversas() {
   const user = getUserData();
   if (!user?.id) return;
@@ -1510,8 +1448,6 @@ async function enviarMensagem() {
   chatMessages.push({ role: "user", content: userMessage });
   salvarConversaAtual();
 
-  const cronogramaInfo = detectarCronograma(userMessage);
-
   const modo = feiraSelecionada ? "classificacao" : "conversa";
 
   let feiraMapeada = "";
@@ -1607,16 +1543,6 @@ async function enviarMensagem() {
 
       chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
       await digitarTexto(aiElement, textoFormatado, 6);
-
-      if (cronogramaInfo) {
-        const cronogramaEl = document.createElement("div");
-        cronogramaEl.classList.add("message", "bot");
-        cronogramaEl.innerHTML = formatarRespostaIA(cronogramaInfo);
-        chatArea.appendChild(cronogramaEl);
-        void renderizarMatematica(cronogramaEl);
-        chatMessages.push({ role: "assistant", content: cronogramaInfo });
-        chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
-      }
 
       salvarConversaAtual();
     } else {
