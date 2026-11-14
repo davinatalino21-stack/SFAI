@@ -21,6 +21,12 @@ class TestContextoFeira(unittest.TestCase):
             ["MOSTRATEC"],
         )
 
+    def test_mostra_tecnologica_generica_nao_vira_mostratec(self):
+        self.assertEqual(
+            identificar_feiras_mencionadas("Uma mostra tecnológica escolar."),
+            [],
+        )
+
     def test_follow_up_pronominal_mantem_feira(self):
         historico = [
             {"remetente": "user", "conteudo": "O que é a MOSTRATEC?"},
