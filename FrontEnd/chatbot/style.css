@@ -1603,3 +1603,61 @@
   }
 }
 
+
+/* ============================================================
+   SFAI — Chat integrado ao fundo da página
+   Remove o cartão externo da conversa e uniformiza o canvas.
+   ============================================================ */
+.app {
+  background: var(--bg);
+}
+
+.app-main,
+.chat-stage,
+.chat-container,
+.chat-area {
+  background: transparent;
+}
+
+.chat-stage {
+  padding: 12px clamp(20px, 3vw, 44px) 10px;
+}
+
+.chat-container {
+  width: min(1160px, 100%);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  overflow: visible;
+}
+
+.chat-container.expanded {
+  border: 0;
+  box-shadow: none;
+}
+
+.chat-area {
+  padding: 14px clamp(8px, 2vw, 24px) 16px;
+}
+
+.app-main.state-chat .app-footer {
+  background: transparent;
+}
+
+@media (max-width: 932px) {
+  .chat-stage,
+  .app-main.state-chat .chat-stage {
+    padding: 6px 10px 4px;
+  }
+
+  .chat-container {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .chat-area {
+    padding: 12px 12px 10px;
+  }
+}
