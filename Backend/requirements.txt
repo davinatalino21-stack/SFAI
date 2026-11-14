@@ -16,3 +16,5 @@ google-auth
 email-validator
 pymupdf
 huggingface-hub
+python-dotenv
+groq

@@ -5,7 +5,13 @@ import bcrypt
 from jose import JWTError, jwt
 
 # Chave usada para assinar os JWTs
-SECRET_KEY = os.getenv("JWT_SECRET", "troque_essa_chave_em_producao")
+SECRET_KEY = os.getenv("JWT_SECRET", "")
+
+if not SECRET_KEY or len(SECRET_KEY) < 32:
+    raise RuntimeError(
+        "JWT_SECRET não configurada: defina uma chave de 32+ caracteres "
+        "nas variáveis de ambiente antes de iniciar o backend."
+    )
 
 # Algoritmo do JWT
 ALGORITHM = "HS256"
