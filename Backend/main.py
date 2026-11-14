@@ -342,8 +342,8 @@ GROQ_HISTORY_MAX_CHARS = int(os.environ.get("GROQ_HISTORY_MAX_CHARS", "5000"))
 GROQ_HISTORY_MAX_MESSAGE_CHARS = int(
     os.environ.get("GROQ_HISTORY_MAX_MESSAGE_CHARS", "1500")
 )
-# Limite das referências exibidas/armazenadas após a busca.
-# A navegação interna da Groq é controlada separadamente pelo raciocínio e prompt.
+# Limite de referências destacadas no painel; a lista completa é preservada
+# para que os índices das citações nativas da Groq continuem corretos.
 GROQ_WEB_MAX_SOURCES = max(
     1, min(int(os.environ.get("GROQ_WEB_MAX_SOURCES", "5")), 10)
 )
@@ -608,10 +608,10 @@ def registrar_ferramentas_executadas(
     consulta_usuario: str = "",
     exigir_atualidade: bool = False,
 ) -> tuple[list[dict], bool]:
-    """Extrai metadados, remove duplicatas e limita as fontes retornadas ao frontend.
+    """Extrai fontes na ordem original e marca até 5 referências para o painel.
 
     A navegação interna da Browser Search acontece nos servidores da Groq.
-    O limite local controla as fontes exibidas/salvas, não o volume já processado
+    O limite local controla a exibição das fontes, não o volume já processado
     dentro do ciclo interno da ferramenta.
     """
     fontes_candidatas = []
