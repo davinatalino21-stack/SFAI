@@ -112,6 +112,22 @@ function initSidebar() {
 
 const token = localStorage.getItem("token");
 
+const cabecalhosAutenticados = () => {
+  const headers = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+};
+
+const encerrarSessaoInvalida = () => {
+  window.SFAIAccount?.clear();
+  window.location.href = "Login/login.html";
+};
+
 // Preferências definidas na página de Configurações (Settings/settings.js).
 // Sem o módulo carregado (ou sem preferência salva), vale o padrão "ativo".
 const preferenciaAtiva = (chave) => window.SFAIPrefs?.get(chave) !== false;
@@ -246,7 +262,7 @@ const initUserMenu = () => {
 };
 
 if (!token) {
-  window.location.href = "Layout.html";
+  window.location.href = "Login/login.html";
 }
 
 function atualizarModoBadge() {
@@ -659,7 +675,13 @@ async function carregarConversas() {
   if (!user?.id) return;
 
   try {
-    const res = await fetch(`${API_BASE_URL}/conversas/${user.id}`);
+    const res = await fetch(`${API_BASE_URL}/conversas/${user.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 401) {
+      encerrarSessaoInvalida();
+      return;
+    }
     if (!res.ok) throw new Error("Erro ao carregar conversas");
     const data = await res.json();
     listaConversas = Array.isArray(data) ? data : [];
@@ -778,7 +800,14 @@ async function abrirConversa(conversaId) {
   if (chatContainer) chatContainer.classList.add("expanded");
 
   try {
-    const res = await fetch(`${API_BASE_URL}/conversas/${conversaId}/mensagens`);
+    const res = await fetch(
+      `${API_BASE_URL}/conversas/${conversaId}/mensagens`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (res.status === 401) {
+      encerrarSessaoInvalida();
+      return;
+    }
     if (!res.ok) throw new Error("Erro ao carregar mensagens");
     const mensagens = await res.json();
 
@@ -1089,10 +1118,7 @@ async function enviarMensagem() {
 
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers: cabecalhosAutenticados(),
       body: JSON.stringify({
         usuario_id: usuarioId,
         conversa_id: conversaAtualId,
@@ -1102,6 +1128,13 @@ async function enviarMensagem() {
         mensagem: userMessage,
       }),
     });
+
+    if (response.status === 401) {
+      aiElement.classList.add("chat-error");
+      aiElement.innerHTML = `<span class="chat-error-msg">Sua sessão expirou. Redirecionando para o login...</span>`;
+      setTimeout(encerrarSessaoInvalida, 1500);
+      return;
+    }
 
     const data = await response.json();
 
