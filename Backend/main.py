@@ -2289,6 +2289,11 @@ def classificar_resumo_api(
             status_code=400,
             detail="Só é possível regenerar uma resposta de conversa existente.",
         )
+    if dados.acao_resposta and (modo != "conversa" or not conversa_id_str):
+        raise HTTPException(
+            status_code=400,
+            detail="Esta ação só pode ser usada em uma resposta de conversa existente.",
+        )
 
     if conversa_id_str:
         try:
