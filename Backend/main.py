@@ -2184,8 +2184,8 @@ def classificar_resumo_api(
             rag_consultado=exige_rag,
         )
         busca_exige_atualidade = bool(re.search(
-            r"\b(cronograma|calend[aá]rio|prazo|inscri[cç][aã]o|datas? atuais?|"
-            r"edi[cç][aã]o vigente|per[ií]odo de inscri[cç][aã]o)\b",
+            r"\b(cronograma|calend[aá]rio|prazo|inscri[cç][aã]o|data(?:s)?|"
+            r"per[ií]odo|abertura|encerramento|submiss[aã]o|edi[cç][aã]o vigente)\b",
             mensagem or "",
             flags=re.IGNORECASE,
         )) and not bool(re.search(
@@ -2203,6 +2203,7 @@ def classificar_resumo_api(
             print(
                 "[GROQ][CONTEXTO_ESTIMADO] "
                 f"sistema≈{estimar_tokens_aproximados(SYSTEM_PROMPT_CHAT_RAG)} | "
+                f"feira≈{estimar_tokens_aproximados(contexto_feira)} | "
                 f"histórico≈{estimar_tokens_aproximados(historico_formatado)} | "
                 f"RAG≈{estimar_tokens_aproximados(texto_rag_estimado)} | "
                 f"pergunta≈{estimar_tokens_aproximados(mensagem)} | "
