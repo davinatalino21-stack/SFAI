@@ -1614,6 +1614,8 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
   if (!elemento || elemento.classList.contains("chat-error")) return null;
   const proximo = elemento.nextElementSibling;
   if (proximo?.classList.contains("sfai-message-footer")) {
+    const fontesExistentes = proximo.querySelector(".rag-fontes");
+    if (fontesExistentes) elemento.appendChild(fontesExistentes);
     proximo.remove();
   } else if (proximo?.classList.contains("sfai-message-actions")) {
     proximo.remove();
