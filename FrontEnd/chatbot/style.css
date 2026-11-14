@@ -1832,3 +1832,42 @@
     right: 0;
   }
 }
+
+
+/* Mantém a cápsula de fontes e as ações na mesma linha */
+.sfai-message-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin: -10px 0 18px;
+}
+
+.sfai-message-footer .rag-fontes {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.sfai-message-footer .sfai-message-actions {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 1 auto;
+  margin: 0;
+  width: fit-content;
+}
+
+.sfai-message-footer .rag-fontes-dropdown {
+  max-width: min(420px, calc(100vw - 32px));
+}
+
+@media (max-width: 600px) {
+  .sfai-message-footer {
+    gap: 5px;
+    margin-top: -9px;
+  }
+}
