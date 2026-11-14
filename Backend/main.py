@@ -385,18 +385,18 @@ SYSTEM_PROMPT_CHAT_RAG = (
     "Nunca use uma data encontrada em PDF/RAG como se fosse atual. Documentos internos "
     "podem estar desatualizados; trate datas neles como históricas, a menos que o próprio "
     "documento identifique explicitamente a edição vigente e isso seja confirmado por "
-    "uma fonte oficial atual na web.\\n"
+    "uma fonte oficial atual na web.\n"
     "6. Ao pesquisar datas de feiras, procure primeiro o calendário/edital da edição "
     "vigente no site oficial da organização. Confira o ano/edição e o contexto da data "
     "(publicação do documento, abertura das inscrições, encerramento ou evento); não "
     "confunda essas datas. Se fontes oficiais não confirmarem o período vigente, não "
     "forneça uma data como certa: diga que não conseguiu verificá-la. Se houver conflito, "
-    "prefira a página oficial atual e explique a divergência brevemente.\\n"
+    "prefira a página oficial atual e explique a divergência brevemente.\n"
     "7. Para perguntas gerais, conceituais e saudações, responda sem consultar fontes "
-    "desnecessariamente.\\n"
+    "desnecessariamente.\n"
     "8. Não crie uma seção final manual de fontes ou links. O backend anexa os metadados "
     "reais dos documentos recuperados e dos sites visitados. Não diga que pesquisou "
-    "na internet se a ferramenta não foi executada.\\n\\n"
+    "na internet se a ferramenta não foi executada.\n\n"
     "CONCISÃO E FORMATO DAS RESPOSTAS:\n"
     "Seja direto e proporcional à pergunta. Para perguntas simples, responda em 1 a 4 "
     "frases. Em geral, use no máximo 120 palavras, salvo quando o usuário pedir "
@@ -494,14 +494,14 @@ def pergunta_exige_calendario_atual(mensagem: str, contexto_conversa: str = "") 
     texto = f"{contexto_conversa or ''} {mensagem or ''}".lower()
 
     menciona_feira = bool(re.search(
-        r"\\b(febrace|mostratec|feira(?:s)? de ci[eê]ncias?)\\b",
+        r"\b(febrace|mostratec|feira(?:s)? de ci[eê]ncias?)\b",
         texto,
         flags=re.IGNORECASE,
     ))
     pergunta_temporal = bool(re.search(
-        r"\\b(inscri[cç][aã]o|inscri[cç][oõ]es|prazo|cronograma|calend[aá]rio|"
+        r"\b(inscri[cç][aã]o|inscri[cç][oõ]es|prazo|cronograma|calend[aá]rio|"
         r"edital|data(?:s)?|per[ií]odo|edi[cç][aã]o|abertura|encerramento|"
-        r"submiss[aã]o|come[cç]a|termina)\\b",
+        r"submiss[aã]o|come[cç]a|termina)\b",
         texto,
         flags=re.IGNORECASE,
     ))
@@ -2006,13 +2006,13 @@ def classificar_resumo_api(
         )
         if pergunta_calendario_atual:
             prompt_conversa += (
-                "\\n\\nPESQUISA TEMPORAL PRIORITÁRIA:\\n"
-                f"- Data de referência: {data_hora_atual_brasil()}.\\n"
-                "- A pergunta trata do calendário vigente de uma feira.\\n"
-                "- Use Browser Search obrigatoriamente e priorize o site oficial da organização.\\n"
-                "- Confirme explicitamente o ano/edição a que a data se refere.\\n"
-                "- Não use datas de PDFs, materiais de apoio ou edições antigas como resposta atual.\\n"
-                "- Se não encontrar confirmação oficial da edição vigente, informe que não foi possível verificar.\\n"
+                "\n\nPESQUISA TEMPORAL PRIORITÁRIA:\n"
+                f"- Data de referência: {data_hora_atual_brasil()}.\n"
+                "- A pergunta trata do calendário vigente de uma feira.\n"
+                "- Use Browser Search obrigatoriamente e priorize o site oficial da organização.\n"
+                "- Confirme explicitamente o ano/edição a que a data se refere.\n"
+                "- Não use datas de PDFs, materiais de apoio ou edições antigas como resposta atual.\n"
+                "- Se não encontrar confirmação oficial da edição vigente, informe que não foi possível verificar.\n"
             )
 
         resposta_gerada = gerar_texto(
