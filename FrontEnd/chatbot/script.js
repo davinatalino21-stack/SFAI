@@ -2047,7 +2047,7 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
     chatMessages.push({
       role: "user",
       content: userMessage,
-      temImagem: imagensParaEnvio.length > 0,
+      temImagem: false,
     });
     salvarConversaAtual();
   }
@@ -2151,6 +2151,10 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
     if (data.resultado) {
       const textoIA = data.resultado;
       if (imagensParaEnvio.length) {
+        const ultimaMensagemUsuario = chatMessages.at(-1);
+        if (ultimaMensagemUsuario?.role === "user") {
+          ultimaMensagemUsuario.temImagem = true;
+        }
         const idsEnviados = new Set(imagensParaEnvio.map((anexo) => anexo.id));
         imagensAnexadas = imagensAnexadas.filter((anexo) => !idsEnviados.has(anexo.id));
         renderizarPreviaImagens();
