@@ -563,7 +563,7 @@ def obter_retry_after_segundos(erro) -> int | None:
 
     # Exemplo retornado pela API: "Please try again in 11m16.08s".
     correspondencia = re.search(
-        r"try again in\\s+(?:(\\d+)\\s*h)?\\s*(?:(\\d+)\\s*m)?\\s*(\\d+(?:\\.\\d+)?)\\s*s",
+        r"try again in\s+(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?\s*(\d+(?:\.\d+)?)\s*s",
         texto_erro,
         flags=re.IGNORECASE,
     )
