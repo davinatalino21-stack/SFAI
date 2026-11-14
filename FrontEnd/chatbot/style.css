@@ -609,8 +609,8 @@
 }
 
 .input-text:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--focus-ring);
+  border-color: var(--border);
+  box-shadow: none;
 }
 
 .input-text textarea {
