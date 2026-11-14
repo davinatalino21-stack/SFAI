@@ -331,6 +331,111 @@ function escaparHtml(texto) {
     .replace(/'/g, "&#39;");
 }
 
+// ============================================================
+// Renderização de fórmulas matemáticas (MathJax 3)
+// A biblioteca é carregada sob demanda, apenas quando há fórmulas.
+// ============================================================
+let sfaiMathJaxPromise = null;
+
+function carregarMathJax() {
+  if (window.MathJax?.typesetPromise) {
+    return Promise.resolve(window.MathJax);
+  }
+
+  if (sfaiMathJaxPromise) return sfaiMathJaxPromise;
+
+  // A configuração deve existir antes de o script MathJax carregar.
+  window.MathJax = {
+    tex: {
+      inlineMath: [["\\(", "\\)"]],
+      displayMath: [["\\[", "\\]"], ["$", "$"]],
+      processEscapes: true,
+      packages: { "[+]": ["ams"] },
+    },
+    options: {
+      skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"],
+    },
+    startup: {
+      typeset: false,
+    },
+  };
+
+  const script = document.createElement("script");
+  script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js";
+  script.async = true;
+  script.crossOrigin = "anonymous";
+
+  sfaiMathJaxPromise = new Promise((resolve, reject) => {
+    script.onload = () => resolve(window.MathJax);
+    script.onerror = () => {
+      sfaiMathJaxPromise = null;
+      reject(new Error("Não foi possível carregar o MathJax."));
+    };
+  });
+
+  document.head.appendChild(script);
+  return sfaiMathJaxPromise;
+}
+
+async function renderizarMatematica(elemento) {
+  if (
+    !elemento ||
+    !elemento.querySelector?.(".ans-math-block, .ans-math-inline")
+  ) {
+    return;
+  }
+
+  try {
+    const mathJax = await carregarMathJax();
+    if (mathJax?.typesetPromise) {
+      await mathJax.typesetPromise([elemento]);
+    }
+  } catch (erro) {
+    // O texto da resposta continua disponível se a CDN falhar.
+    console.error("Erro ao renderizar fórmulas matemáticas:", erro);
+  }
+}
+
+// Extrai fórmulas antes do Markdown para não separar delimitadores,
+// conteúdo e fechamento em diferentes elementos HTML.
+function protegerEquacoesMatematicas(texto) {
+  const equacoes = [];
+  const padrao =
+    /\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)|\$\$([\s\S]*?)\$\$/g;
+
+  const textoProtegido = String(texto ?? "").replace(
+    padrao,
+    (completo, display, inline, displayDolar) => {
+      const tipo =
+        display !== undefined || displayDolar !== undefined
+          ? "display"
+          : "inline";
+      const conteudo = display ?? inline ?? displayDolar ?? "";
+      const token = "SFAI_MATH_TOKEN_" + equacoes.length + "_END";
+
+      equacoes.push({
+        token,
+        tipo,
+        conteudo: String(conteudo).trim(),
+      });
+
+      return "\n\n" + token + "\n\n";
+    },
+  );
+
+  return { texto: textoProtegido, equacoes };
+}
+
+function montarHtmlEquacao(equacao) {
+  const conteudo = escaparHtml(equacao.conteudo);
+
+  if (equacao.tipo === "display") {
+    return '<div class="ans-math-block">\\[' + conteudo + '\\]</div>';
+  }
+
+  return '<span class="ans-math-inline">\\(' + conteudo + '\\)</span>';
+}
+
 function normalizarNome(texto) {
   return String(texto || "")
     .replace(/^\s*fonte\s*:\s*/i, "")
@@ -393,6 +498,25 @@ function instalarEstilosFontesRag() {
     .ans-heading-1 { font-size: 1.15em; }
     .ans-heading-2 { font-size: 1.08em; }
     .ans-heading-3 { font-size: 1em; }
+    .ans-math-block {
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      margin: 10px 0;
+      padding: 4px 0;
+      text-align: left;
+    }
+    .ans-math-inline {
+      display: inline-block;
+      max-width: 100%;
+      vertical-align: middle;
+    }
+    mjx-container {
+      max-width: 100%;
+    }
+    mjx-container[display="true"] {
+      margin: .8em 0 !important;
+    }
     @media (max-width: 600px) {
       .rag-fontes { font-size: .88em; }
       .ans-heading { margin: 8px 0 4px; }
@@ -510,14 +634,19 @@ function formatarRespostaIA(texto, fontes) {
   if (!texto) return "";
 
   instalarEstilosFontesRag();
-  const fontesRag = separarFontes(fontes).rag;
 
-  texto = String(texto)
+  // Protege expressões matemáticas antes das substituições de Markdown.
+  const protegido = protegerEquacoesMatematicas(String(texto));
+  const equacoesPorToken = new Map(
+    protegido.equacoes.map((equacao) => [equacao.token, equacao]),
+  );
+
+  texto = protegido.texto
     .replace(/\*\*(.*?)\*\*/gs, "<strong>$1</strong>")
     .replace(/(?<![\w.])_([^_\n]+?)_(?![\w.])/g, "<em>$1</em>")
     .replace(/\*(.*?)\*/gs, "<em>$1</em>");
 
-  texto = converterCitacoesEmLinks(texto, fontesRag);
+  texto = converterCitacoesEmLinks(texto, separarFontes(fontes).rag);
   texto = texto.replace(/^[\s*•-]+\s+/gm, "");
 
   const corpo = texto
@@ -532,21 +661,36 @@ function formatarRespostaIA(texto, fontes) {
 
       const conteudo = linhas
         .map((linha) => {
+          // Uma equação em bloco ocupa seu próprio elemento.
+          const equacaoSozinha = equacoesPorToken.get(linha);
+          if (equacaoSozinha) {
+            return montarHtmlEquacao(equacaoSozinha);
+          }
+
           const titulo = linha.match(/^(#{1,6})\s+(.+)$/);
           if (titulo) {
             const nivel = Math.min(titulo[1].length, 3);
-            return `<div class="ans-heading ans-heading-${nivel}">${titulo[2]}</div>`;
+            return '<div class="ans-heading ans-heading-' + nivel + '">' +
+              titulo[2] + '</div>';
           }
-          return `<div class="ans-line">${linha}</div>`;
+
+          // Fórmulas inline permanecem dentro da linha do parágrafo.
+          const linhaComEquacoes = linha.replace(
+            /SFAI_MATH_TOKEN_(\d+)_END/g,
+            (token) => {
+              const equacao = equacoesPorToken.get(token);
+              return equacao ? montarHtmlEquacao(equacao) : token;
+            },
+          );
+
+          return '<div class="ans-line">' + linhaComEquacoes + '</div>';
         })
         .join("");
 
-      return `<div class="ans-block">${conteudo}</div>`;
+      return '<div class="ans-block">' + conteudo + '</div>';
     })
     .join("");
 
-  // A lista vem diretamente dos metadados do backend, independentemente
-  // do formato que o modelo escolheu para mencionar as fontes.
   return corpo + formatarListaFontes(fontes);
 }
 
@@ -554,6 +698,7 @@ async function digitarTexto(elemento, html, velocidade = 5) {
   // Configuração "Mostrar animação de digitação" desligada: exibe tudo de uma vez.
   if (!preferenciaAtiva("typingAnimation")) {
     elemento.innerHTML = html;
+    await renderizarMatematica(elemento);
     return;
   }
 
@@ -580,6 +725,7 @@ async function digitarTexto(elemento, html, velocidade = 5) {
   }
 
   elemento.innerHTML = exibicaoParcial;
+  await renderizarMatematica(elemento);
 }
 
 input.addEventListener("input", ajustarAlturaTextarea);
@@ -827,6 +973,7 @@ async function abrirConversa(conversaId) {
         historicoConversa.push({ role, content: conteudo });
 
         chatArea.appendChild(messageElement);
+        void renderizarMatematica(messageElement);
       } else {
         messageElement.textContent = msg.conteudo;
         chatArea.appendChild(messageElement);
@@ -951,6 +1098,9 @@ function carregarConversaAtual() {
           }
 
           chatArea.appendChild(messageElement);
+          if (item.role === "assistant") {
+            void renderizarMatematica(messageElement);
+          }
         });
         chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
         primeiravez = false;
@@ -1195,6 +1345,7 @@ async function enviarMensagem() {
         cronogramaEl.classList.add("message", "bot");
         cronogramaEl.innerHTML = formatarRespostaIA(cronogramaInfo);
         chatArea.appendChild(cronogramaEl);
+        void renderizarMatematica(cronogramaEl);
         chatMessages.push({ role: "assistant", content: cronogramaInfo });
         chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
       }
