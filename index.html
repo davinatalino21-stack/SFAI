@@ -91,7 +91,13 @@
               <button class="suggestion-arrow suggestion-arrow-right" type="button" aria-label="Próxima sugestão" onclick="moverSugestoes(1)">›</button>
             </div>
 
+            <div class="sfai-image-preview-list" id="image-preview-list" hidden></div>
+            <div class="sfai-image-status" id="image-status" role="status" aria-live="polite"></div>
             <div class="input-area">
+              <input id="image-input" class="sfai-image-input" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+              <button type="button" class="attach-image-btn" id="image-attach-button" title="Anexar imagens" aria-label="Anexar até 3 imagens">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.4 11.1-8.5 8.5a5 5 0 0 1-7.1-7.1l9.2-9.2a3.5 3.5 0 0 1 5 5l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
+              </button>
               <div class="feira-selector">
                 <button type="button" class="options-input-area" onclick="toggleFeiraPopup()" aria-haspopup="true" aria-expanded="false" id="feiraToggle" title="Classificar para uma feira" aria-label="Escolher feira">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
