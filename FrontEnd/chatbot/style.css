@@ -1871,3 +1871,13 @@
     margin-top: -9px;
   }
 }
+
+
+/* Corrige o foco duplicado do campo de mensagem.
+   O anel de foco pertence ao contêiner .input-text; o textarea não deve
+   receber também o box-shadow global de :focus-visible. */
+.input-text textarea:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border-radius: 0;
+}
