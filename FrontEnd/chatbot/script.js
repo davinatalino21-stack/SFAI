@@ -1896,7 +1896,7 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
   requisicaoChatAtiva = controller;
   const barraGeracao = adicionarAcoesGeracao(aiElement, controller);
 
-  const modo = regenerando
+  const modo = (regenerando || transformacao)
     ? "conversa"
     : (feiraSelecionada ? "classificacao" : "conversa");
 
