@@ -378,6 +378,9 @@ groq_client = Groq(api_key=GROQ_API_KEY, max_retries=0) if GROQ_API_KEY else Non
 GROQ_VISION_MODEL = os.environ.get("GROQ_VISION_MODEL", "qwen/qwen3.8-27b").strip()
 GROQ_VISION_MAX_IMAGES = 3
 GROQ_VISION_MAX_IMAGE_BYTES = 10 * 1024 * 1024
+# A Groq limita a requisição multimodal inteira a 20 MB; 14 MB binários
+# deixam margem para a expansão Base64 e para o JSON/texto da pergunta.
+GROQ_VISION_MAX_TOTAL_IMAGE_BYTES = 14 * 1024 * 1024
 GROQ_VISION_MAX_DESCRIPTION_CHARS = 4500
 MARCADOR_CONTEXTO_VISUAL = "\n\n[SFAI_CONTEXT_VISUAL]\n"
 groq_vision_client = (
@@ -2008,7 +2011,11 @@ def validar_imagem_data_url(data_url: str) -> dict:
             status_code=400,
             detail="O tipo declarado da imagem não corresponde ao arquivo enviado.",
         )
-    return {"mime": mime_real, "data_url": data_url.strip()}
+    return {
+        "mime": mime_real,
+        "data_url": data_url.strip(),
+        "size_bytes": len(conteudo),
+    }
 
 
 def analisar_imagens_qwen(imagens: list[str], pergunta: str = "") -> str:
@@ -2024,6 +2031,12 @@ def analisar_imagens_qwen(imagens: list[str], pergunta: str = "") -> str:
         )
 
     imagens_validadas = [validar_imagem_data_url(item) for item in imagens]
+    tamanho_total = sum(item["size_bytes"] for item in imagens_validadas)
+    if tamanho_total > GROQ_VISION_MAX_TOTAL_IMAGE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="O conjunto de imagens deve ter no máximo 14 MB no total.",
+        )
     pergunta = (pergunta or "Analise as imagens anexadas.").strip()[:1500]
     partes = [{
         "type": "text",
