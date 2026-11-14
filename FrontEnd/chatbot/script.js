@@ -1328,15 +1328,14 @@ async function abrirConversa(conversaId) {
 
         chatArea.appendChild(messageElement);
         void renderizarMatematica(messageElement);
-        if (indiceMensagem === mensagens.length - 1) {
-          const perguntaAnterior = mensagens[indiceMensagem - 1];
-          const podeRegenerar = Boolean(conversaAtualId) &&
-            perguntaAnterior?.remetente === "user" &&
-            !String(perguntaAnterior.conteudo || "").startsWith("Classificar resumo:");
-          adicionarAcoesMensagem(messageElement, conteudo, msg.fontes || [], {
-            allowRegenerate: podeRegenerar,
-          });
-        }
+        const ultimaMensagem = indiceMensagem === mensagens.length - 1;
+        const perguntaAnterior = mensagens[indiceMensagem - 1];
+        const podeRegenerar = ultimaMensagem && Boolean(conversaAtualId) &&
+          perguntaAnterior?.remetente === "user" &&
+          !String(perguntaAnterior.conteudo || "").startsWith("Classificar resumo:");
+        adicionarAcoesMensagem(messageElement, conteudo, msg.fontes || [], {
+          allowRegenerate: podeRegenerar,
+        });
       } else {
         messageElement.textContent = msg.conteudo;
         chatArea.appendChild(messageElement);
@@ -1465,11 +1464,9 @@ function carregarConversaAtual() {
             void renderizarMatematica(messageElement);
             const ultimaMensagem = indiceMensagem === mensagens.length - 1;
             const temPerguntaAnterior = mensagens[indiceMensagem - 1]?.role === "user";
-            if (ultimaMensagem) {
-              adicionarAcoesMensagem(messageElement, item.content, item.fontes || [], {
-                allowRegenerate: temPerguntaAnterior && Boolean(conversaAtualId),
-              });
-            }
+            adicionarAcoesMensagem(messageElement, item.content, item.fontes || [], {
+              allowRegenerate: ultimaMensagem && temPerguntaAnterior && Boolean(conversaAtualId),
+            });
           }
         });
         chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
