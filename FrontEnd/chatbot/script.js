@@ -1802,7 +1802,7 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
 
 async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
   const regenerando = opcoes.regenerar === true;
-  if (requisicaoChatAtiva && !regenerando) return;
+  if (requisicaoChatAtiva) return;
 
   const userMessage = (
     typeof mensagemOverride === "string" ? mensagemOverride : input.value
