@@ -494,6 +494,25 @@ async function renderizarGraficos(elemento) {
         options: opcoes,
       });
       sfaiChartsAtivos.set(canvas, chart);
+
+      if (!card.querySelector(".sfai-chart-download")) {
+        const baixarGrafico = document.createElement("button");
+        baixarGrafico.type = "button";
+        baixarGrafico.className = "sfai-chart-download";
+        baixarGrafico.textContent = "Baixar gráfico";
+        baixarGrafico.title = "Baixar gráfico como imagem PNG";
+        baixarGrafico.addEventListener("click", () => {
+          try {
+            const link = document.createElement("a");
+            link.href = canvas.toDataURL("image/png");
+            link.download = "grafico-sfai.png";
+            link.click();
+          } catch (erro) {
+            console.error("Não foi possível exportar o gráfico:", erro);
+          }
+        });
+        card.appendChild(baixarGrafico);
+      }
     });
   } catch (erro) {
     console.error("Erro ao renderizar gráfico:", erro);
@@ -1311,7 +1330,8 @@ async function abrirConversa(conversaId) {
         void renderizarMatematica(messageElement);
         if (indiceMensagem === mensagens.length - 1) {
           const perguntaAnterior = mensagens[indiceMensagem - 1];
-          const podeRegenerar = perguntaAnterior?.remetente === "user" &&
+          const podeRegenerar = Boolean(conversaAtualId) &&
+            perguntaAnterior?.remetente === "user" &&
             !String(perguntaAnterior.conteudo || "").startsWith("Classificar resumo:");
           adicionarAcoesMensagem(messageElement, conteudo, msg.fontes || [], {
             allowRegenerate: podeRegenerar,
@@ -1447,7 +1467,7 @@ function carregarConversaAtual() {
             const temPerguntaAnterior = mensagens[indiceMensagem - 1]?.role === "user";
             if (ultimaMensagem) {
               adicionarAcoesMensagem(messageElement, item.content, item.fontes || [], {
-                allowRegenerate: temPerguntaAnterior,
+                allowRegenerate: temPerguntaAnterior && Boolean(conversaAtualId),
               });
             }
           }
