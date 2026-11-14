@@ -697,55 +697,92 @@ function instalarEstilosFontesRag() {
 }
 
 function converterCitacoesEmLinks(texto, fontes) {
-  if (!texto || !Array.isArray(fontes) || fontes.length === 0) return texto;
+  if (!texto) return texto;
 
-  // Remove qualquer link Markdown que envolva uma citação numerada: o link
-  // será reconstruído com o ID oficial do backend, nunca com a URL da IA.
-  texto = texto.replace(
-    /\[([^\]]*\bFonte\s*\d+\b[^\]]*)\]\((?:https?:\/\/|\/)[^)]+\)/gi,
-    "$1"
-  );
+  const grupos = separarFontes(fontes);
+  const fontesRag = grupos.rag;
+  const fontesWeb = grupos.web;
 
-  // Remove também links para a rota local de documentos, mesmo quando o
-  // rótulo não contém o nome do PDF. O painel de fontes colocará o link certo.
-  texto = texto.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/gi,
-    (match, rotulo, destino) => /\/documentos?\//i.test(destino) ? rotulo : match
-  );
+  // Citações dos documentos internos: Fonte 1, Fonte 2 etc.
+  if (fontesRag.length > 0) {
+    texto = texto.replace(
+      /\[([^\]]*\bFonte\s*\d+\b[^\]]*)\]\((?:https?:\/\/|\/)[^)]+\)/gi,
+      "$1"
+    );
 
-  // Citação numérica: Fonte 1 aponta sempre para fontes[0], Fonte 2 para fontes[1].
-  texto = texto.replace(/\bFonte\s*(\d+)\b/gi, (match, numero, offset, original) => {
-    const fonte = fontes[Number(numero) - 1];
-    if (!fonte) return match;
+    texto = texto.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/gi,
+      (match, rotulo, destino) => /\/documentos?\//i.test(destino) ? rotulo : match
+    );
 
-    const antes = original.slice(0, offset);
-    if (antes.lastIndexOf("<a") > antes.lastIndexOf("</a>")) return match;
-
-    // A página vem sempre dos metadados do backend, nunca do número
-    // escrito pela IA (que pode estar errado).
-    const url = montarUrlFonte(fonte);
-
-    return `<a class="rag-citacao-link" href="${url}" target="_blank" rel="noopener noreferrer">${match}</a>`;
-  });
-
-  // Formato legado: (Fonte: nome-exato.pdf, p. 3). A comparação é exata
-  // após normalização; nomes parciais não são aceitos.
-  texto = texto.replace(
-    /\bFonte\s*:\s*["“]?([^,;()\n"”]+\.pdf)["”]?/gi,
-    (match, nome) => {
-      const nomeLimpo = nome.trim();
-      const chave = normalizarNome(nomeLimpo);
-      const fonte = fontes.find((item) => normalizarNome(item.arquivo || "") === chave);
+    texto = texto.replace(/\bFonte\s*(\d+)\b/gi, (match, numero, offset, original) => {
+      const fonte = fontesRag[Number(numero) - 1];
       if (!fonte) return match;
 
+      const antes = original.slice(0, offset);
+      if (antes.lastIndexOf("<a") > antes.lastIndexOf("</a>")) return match;
+
       const url = montarUrlFonte(fonte);
-      return `<a class="rag-citacao-link" href="${url}" target="_blank" rel="noopener noreferrer">${match}</a>`;
+      return '<a class="rag-citacao-link" href="' + escaparHtml(url) + '" target="_blank" rel="noopener noreferrer">' + match + '</a>';
+    });
+
+    // Formato legado: Fonte: nome-exato.pdf.
+    texto = texto.replace(
+      /\bFonte\s*:\s*["“]?([^,;()\n"”]+\.pdf)["”]?/gi,
+      (match, nome) => {
+        const chave = normalizarNome(nome.trim());
+        const fonte = fontesRag.find((item) => normalizarNome(item.arquivo || "") === chave);
+        if (!fonte) return match;
+
+        const url = montarUrlFonte(fonte);
+        return '<a class="rag-citacao-link" href="' + escaparHtml(url) + '" target="_blank" rel="noopener noreferrer">' + match + '</a>';
+      }
+    );
+  }
+
+  // Citações nativas do Browser Search da Groq:
+  // 【3†L5-L7】, 〖3†L5-L7〗 e [3†L5-L7].
+  // O índice aponta para a fonte web na ordem recebida do backend.
+  // L5-L7 é uma referência de linhas do resultado pesquisado, não uma página PDF.
+  texto = texto.replace(
+    /[〖【\[]\s*(\d+)\s*†\s*L(\d+)(?:\s*[-–]\s*L?(\d+))?\s*[〗】\]]/g,
+    (match, numero, linhaInicio, linhaFim) => {
+      const fonte = fontesWeb[Number(numero) - 1];
+      const localizacao = linhaFim
+        ? "linhas " + linhaInicio + "–" + linhaFim
+        : "linha " + linhaInicio;
+
+      if (!fonte) {
+        return "[Fonte " + numero + " · " + localizacao + "; link indisponível]";
+      }
+
+      let url = "";
+      try {
+        const destino = new URL(String(fonte.url || ""));
+        if (destino.protocol === "https:" || destino.protocol === "http:") {
+          url = destino.href;
+        }
+      } catch (_) {
+        url = "";
+      }
+
+      if (!url) {
+        return "[Fonte " + numero + " · " + localizacao + "; link indisponível]";
+      }
+
+      const nomeFonte = String(fonte.titulo || "Fonte consultada");
+      const titulo = nomeFonte + " — " + localizacao;
+      const acessivel = "Fonte " + numero + ", " + localizacao + ": " + nomeFonte;
+
+      return '<a class="rag-citacao-link rag-citacao-web" href="' +
+        escaparHtml(url) + '" target="_blank" rel="noopener noreferrer" title="' +
+        escaparHtml(titulo) + '" aria-label="' + escaparHtml(acessivel) +
+        '">[' + numero + ']</a>';
     }
   );
 
   return texto;
 }
-
 function separarFontes(fontes) {
   if (!Array.isArray(fontes)) return { rag: [], web: [] };
   return {
@@ -866,7 +903,7 @@ function formatarRespostaIA(texto, fontes) {
     .replace(/(?<![\w.])_([^_\n]+?)_(?![\w.])/g, "<em>$1</em>")
     .replace(/\*(.*?)\*/gs, "<em>$1</em>");
 
-  texto = converterCitacoesEmLinks(texto, separarFontes(fontes).rag);
+  texto = converterCitacoesEmLinks(texto, fontes);
   texto = texto.replace(/^[\s*•-]+\s+/gm, "");
 
   const corpo = texto
@@ -1550,7 +1587,10 @@ async function enviarMensagem() {
 
       const fontesResposta = Array.isArray(data.fontes)
         ? data.fontes
-        : (data.fontes_rag || []);
+        : [
+            ...(Array.isArray(data.fontes_rag) ? data.fontes_rag : []),
+            ...(Array.isArray(data.fontes_web) ? data.fontes_web : []),
+          ];
 
       chatMessages.push({
         role: "assistant",
