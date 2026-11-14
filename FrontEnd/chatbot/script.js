@@ -6,6 +6,7 @@ const imageStatus = document.getElementById("image-status");
 const MARCADOR_CONTEXTO_VISUAL = "\n\n[SFAI_CONTEXT_VISUAL]\n";
 const MAX_IMAGENS_MENSAGEM = 3;
 const MAX_TAMANHO_IMAGEM = 10 * 1024 * 1024;
+const MAX_TAMANHO_TOTAL_IMAGENS = 14 * 1024 * 1024;
 let imagensAnexadas = [];
 const chatArea = document.getElementById("chat-area");
 const chatContainer = document.getElementById("chat-container");
@@ -111,17 +112,26 @@ if (imageAttachButton && imageInput) {
     if (!arquivos.length) return;
 
     const espacoDisponivel = MAX_IMAGENS_MENSAGEM - imagensAnexadas.length;
-    if (arquivos.length > espacoDisponivel && imageStatus) {
-      imageStatus.textContent = "O limite é de 3 imagens por mensagem.";
+    const avisos = [];
+    if (arquivos.length > espacoDisponivel) {
+      avisos.push("O limite é de 3 imagens por mensagem.");
     }
 
     for (const arquivo of arquivos.slice(0, Math.max(0, espacoDisponivel))) {
       if (!["image/jpeg", "image/png", "image/webp"].includes(arquivo.type)) {
-        if (imageStatus) imageStatus.textContent = "Use imagens JPEG, PNG ou WebP.";
+        avisos.push(`${arquivo.name}: use JPEG, PNG ou WebP.`);
         continue;
       }
       if (arquivo.size <= 0 || arquivo.size > MAX_TAMANHO_IMAGEM) {
-        if (imageStatus) imageStatus.textContent = "Cada imagem deve ter no máximo 10 MB.";
+        avisos.push(`${arquivo.name}: cada imagem deve ter no máximo 10 MB.`);
+        continue;
+      }
+      const tamanhoAtual = imagensAnexadas.reduce(
+        (total, anexo) => total + anexo.tamanho,
+        0,
+      );
+      if (tamanhoAtual + arquivo.size > MAX_TAMANHO_TOTAL_IMAGENS) {
+        avisos.push("O conjunto de imagens deve ter no máximo 14 MB no total.");
         continue;
       }
       try {
@@ -129,13 +139,15 @@ if (imageAttachButton && imageInput) {
         imagensAnexadas.push({
           id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
           nome: arquivo.name,
+          tamanho: arquivo.size,
           dataUrl,
         });
       } catch (erro) {
-        if (imageStatus) imageStatus.textContent = erro.message;
+        avisos.push(erro.message);
       }
     }
     renderizarPreviaImagens();
+    if (avisos.length && imageStatus) imageStatus.textContent = avisos.join(" ");
   });
 }
 
