@@ -617,6 +617,7 @@ def registrar_ferramentas_executadas(
     fontes_candidatas = []
     fontes_web = []
     urls_vistas = set()
+    resultados_brutos = 0
     browser_executado = False
 
     try:
@@ -656,6 +657,7 @@ def registrar_ferramentas_executadas(
                 continue
 
             for resultado in resultados:
+                resultados_brutos += 1
                 titulo = str(
                     _obter_campo(resultado, "title", "") or "Página consultada"
                 ).strip()
@@ -718,7 +720,7 @@ def registrar_ferramentas_executadas(
 
     print(
         f"[GROQ][WEB] executado={browser_executado} | "
-        f"fontes_recebidas={len(fontes_candidatas)} | "
+        f"resultados_brutos={resultados_brutos} | "
         f"fontes_unicas={len(fontes_web)} | "
         f"fontes_em_destaque={len(fontes_prioritarias)} | "
         f"limite_destaques={GROQ_WEB_MAX_SOURCES}"
@@ -770,6 +772,7 @@ def gerar_texto(
             "country": "brazil",
             # Evita blogs pessoais como fonte de primeira linha em pesquisas gerais.
             "exclude_domains": ["blogspot.com"],
+            "include_images": False,
         }
         # reasoning_effort=low reduz explorações longas da Browser Search.
         parametros["reasoning_effort"] = "low"
