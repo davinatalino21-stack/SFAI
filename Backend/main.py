@@ -2637,7 +2637,7 @@ def classificar_resumo_api(
         )
         print(
             f"[FONTES] rag={exige_rag} | tavily={exige_busca_web} | "
-            f"feira={feira_selecionada or 'não selecionada'} | "
+            f"feiras_contexto={','.join(feiras_contexto) if feiras_contexto else 'não identificada'} | "
             f"calendario_atual={pergunta_calendario_atual}"
         )
 
