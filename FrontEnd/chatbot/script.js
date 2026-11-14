@@ -1494,6 +1494,22 @@ async function enviarMensagem() {
 
     const data = await response.json();
 
+    if (!response.ok) {
+      const detalhe = data?.detail;
+      const mensagemErro = typeof detalhe === "string"
+        ? detalhe
+        : (detalhe?.message || "Não foi possível concluir a solicitação à IA.");
+
+      aiElement.classList.add("chat-error");
+      const erroSpan = document.createElement("span");
+      erroSpan.className = "chat-error-msg";
+      erroSpan.textContent = mensagemErro;
+      aiElement.replaceChildren(erroSpan);
+
+      console.error("Erro retornado pelo backend:", response.status, data);
+      return;
+    }
+
     if (data.resultado) {
       let textoIA = data.resultado;
 
