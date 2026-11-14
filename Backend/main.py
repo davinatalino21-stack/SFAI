@@ -787,6 +787,9 @@ def gerar_texto(
     }
 
     if usar_pesquisa_web:
+        # Mantém o esforço de raciocínio baixo nas respostas que já chegam
+        # acompanhadas de contexto web selecionado pelo backend.
+        parametros["reasoning_effort"] = "low"
         estimativa_inicial = sum(
             estimar_tokens_aproximados(item.get("content", ""))
             for item in parametros["messages"]
