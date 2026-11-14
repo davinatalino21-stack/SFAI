@@ -35,6 +35,14 @@ from sqlalchemy import text as texto_sql
 from database import SessionLocal
 from models import Usuario, Conversa, Mensagem
 from auth import gerar_hash_senha, verificar_senha, criar_token, verificar_token
+from fair_context import (
+    classificar_documento_feira,
+    documento_compativel_com_feiras,
+    montar_consulta_busca_feira,
+    pergunta_exige_busca_web_feira,
+    resolver_feira_conversa,
+    rotulo_contexto_feira,
+)
 
 try:
     import fitz  # PyMuPDF
@@ -381,6 +389,10 @@ SYSTEM_PROMPT_GROQ = (
 SYSTEM_PROMPT_CHAT_RAG = (
     "Você é o assistente virtual do SFAI, especializado em feiras científicas. "
     "Responda sempre em português do Brasil, com clareza, precisão e linguagem natural.\n\n"
+    "IDENTIDADE E CONTINUIDADE DA FEIRA:\n"
+    "- Trate nomes de feiras como entidades próprias, não como expressões genéricas. MOSTRATEC é a Mostra Internacional de Ciência e Tecnologia; nunca interprete o nome como uma simples mostra tecnológica. FEBRACE é a Feira Brasileira de Ciências e Engenharia. Ciência para Todos no Semiárido Potiguar é outra feira, distinta das anteriores.\n"
+    "- Use a feira indicada em CONTEXTO DA FEIRA como referência para perguntas curtas ou pronominais, como dela, essa feira ou o evento. Só troque de feira quando o usuário mencionar outra explicitamente.\n"
+    "- Nunca aplique regulamentos, inscrições, datas, critérios ou orientações de uma feira a outra. Um documento de outra feira não é evidência para a feira atual. Se não houver fonte compatível, diga isso claramente e não preencha a lacuna com documentos de outra organização.\n\n"
     "PRIORIDADE DAS FONTES:\n"
     "1. O contexto pode informar que o RAG foi consultado ou não. Se não foi "
     "consultado, não mencione PDFs nem invente referências. Se foi consultado, use "
@@ -1666,7 +1678,11 @@ def filtrar_resultados_rag(resultados: list[dict]) -> list[dict]:
     return filtrados[:RAG_TOP_K]
 
 
-def buscar_no_rag(pergunta: str, top_k=RAG_TOP_K):
+def buscar_no_rag(
+    pergunta: str,
+    top_k=RAG_TOP_K,
+    feiras_contexto: list[str] | None = None,
+):
     if not rag_indice.get("chunks"):
         return []
 
@@ -1682,9 +1698,40 @@ def buscar_no_rag(pergunta: str, top_k=RAG_TOP_K):
         list(resultado.embeddings[0].values)
     )
 
+    # Classifica cada PDF pelo conjunto de seus chunks. A filtragem ocorre
+    # ANTES do top_k, para que PDFs de outra feira não ocupem as vagas.
+    textos_documentos = {}
+    for item in rag_indice["chunks"]:
+        chave_documento = item.get("caminho") or item.get("arquivo", "")
+        textos_documentos.setdefault(chave_documento, []).append(
+            str(item.get("texto") or "")
+        )
+
+    classificacoes_documentos = {
+        chave: classificar_documento_feira(
+            os.path.basename(str(chave)),
+            "\n".join(textos),
+        )
+        for chave, textos in textos_documentos.items()
+    }
+
     resultados = []
+    ignorados_identidade = 0
 
     for item in rag_indice["chunks"]:
+        chave_documento = item.get("caminho") or item.get("arquivo", "")
+        feira_documento = classificacoes_documentos.get(
+            chave_documento,
+            "DESCONHECIDA",
+        )
+
+        if not documento_compativel_com_feiras(
+            feira_documento,
+            feiras_contexto,
+        ):
+            ignorados_identidade += 1
+            continue
+
         similaridade = similaridade_cosseno(
             vetor_pergunta,
             item.get("embedding", []),
@@ -1695,6 +1742,7 @@ def buscar_no_rag(pergunta: str, top_k=RAG_TOP_K):
                 "similaridade": similaridade,
                 "arquivo": item["arquivo"],
                 "pagina": item["pagina"],
+                "feira_id": feira_documento,
                 "metodo_extracao": item.get(
                     "metodo_extracao",
                     "texto_pdf",
@@ -1708,13 +1756,31 @@ def buscar_no_rag(pergunta: str, top_k=RAG_TOP_K):
         reverse=True,
     )
 
+    if feiras_contexto:
+        print(
+            f"[RAG][IDENTIDADE] feiras={','.join(feiras_contexto)} | "
+            f"chunks_excluidos={ignorados_identidade} | "
+            f"chunks_compativeis={len(resultados)}"
+        )
+
     return resultados[:top_k]
 
 
-def formatar_contexto_rag(resultados, rag_consultado: bool = True):
+def formatar_contexto_rag(
+    resultados,
+    rag_consultado: bool = True,
+    feiras_contexto: list[str] | None = None,
+):
     if not resultados:
         if not rag_consultado:
             return "O RAG NÃO foi consultado: esta pergunta não depende dos documentos internos."
+        if feiras_contexto:
+            return (
+                "O RAG foi consultado com filtro de identidade, mas não encontrou "
+                "trechos relevantes de documentos pertencentes à(s) feira(s) "
+                f"{', '.join(feiras_contexto)} ou materiais gerais compatíveis. "
+                "Não use documentos de outras feiras como substitutos."
+            )
         return (
             "O RAG foi consultado, mas nenhum trecho atingiu o limiar de relevância "
             "configurado. Não cite PDFs nem presuma o conteúdo dos documentos."
@@ -1732,6 +1798,7 @@ def formatar_contexto_rag(resultados, rag_consultado: bool = True):
             f"""[FONTE {i}]
 Arquivo: {item['arquivo']}
 Página: {item['pagina']}
+Feira identificada no documento: {item.get('feira_id', 'não identificada')}
 Trecho:
 {trecho}
 """
@@ -1746,9 +1813,14 @@ def montar_prompt_com_rag(
     mensagem,
     resultados_rag,
     rag_consultado: bool = True,
+    feiras_contexto: list[str] | None = None,
 ):
     """Monta apenas os dados variáveis; as regras fixas ficam no system prompt."""
-    contexto_rag = formatar_contexto_rag(resultados_rag, rag_consultado=rag_consultado)
+    contexto_rag = formatar_contexto_rag(
+        resultados_rag,
+        rag_consultado=rag_consultado,
+        feiras_contexto=feiras_contexto,
+    )
 
     return f"""
 CONTEXTO DA FEIRA:
@@ -2510,46 +2582,58 @@ def classificar_resumo_api(
                 Mensagem.id != mensagem_assistente_substituir_id
             )
 
+        # Carrega mais turnos para resolver referências a uma feira mencionada
+        # anteriormente. O texto enviado à IA continua limitado a quatro mensagens.
         mensagens_recentes = (
             consulta_mensagens_recentes
             .order_by(Mensagem.horario.desc())
-            .limit(5)
+            .limit(20)
             .all()
         )
         mensagens_recentes.reverse()
         historico_formatado = formatar_historico_db(mensagens_recentes, limite=4)
 
-        if feira_selecionada == "FEBRACE":
-            contexto_feira = "Feira selecionada: FEBRACE."
+        feiras_contexto = resolver_feira_conversa(
+            mensagem_atual=mensagem,
+            mensagens_anteriores=mensagens_recentes,
+            feira_selecionada=feira_selecionada,
+        )
+        contexto_feira = rotulo_contexto_feira(feiras_contexto)
 
-        elif feira_selecionada == "MOSTRATEC":
-            contexto_feira = "Feira selecionada: MOSTRATEC."
-
-        else:
-            contexto_feira = "Nenhuma feira específica selecionada."
-
-        # Usa a última pergunta do usuário como contexto para reconhecer
-        # continuações curtas (por exemplo: "e o prazo?").
+        # O rótulo canônico também orienta o roteador quando a pergunta atual
+        # usa pronomes e não repete o nome da feira.
         perguntas_anteriores = [
             item.conteudo
             for item in mensagens_recentes[:-1]
             if item.remetente == "user"
         ]
         contexto_roteador = perguntas_anteriores[-1] if perguntas_anteriores else ""
+        contexto_roteador_feira = f"{contexto_roteador}\n{contexto_feira}"
 
-        # O roteador evita gerar embedding/consultar PDFs em perguntas gerais.
         pergunta_calendario_atual = pergunta_exige_calendario_atual(
             mensagem,
-            contexto_conversa=contexto_roteador,
+            contexto_conversa=contexto_roteador_feira,
         )
         exige_rag = pergunta_exige_rag(
             mensagem,
             feira_selecionada,
-            contexto_conversa=contexto_roteador,
+            contexto_conversa=contexto_roteador_feira,
         ) and not pergunta_calendario_atual
-        exige_busca_web = pergunta_exige_busca_web(
+        exige_busca_web = (
+            pergunta_exige_busca_web(
+                mensagem,
+                contexto_conversa=contexto_roteador_feira,
+            )
+            or pergunta_exige_busca_web_feira(mensagem, feiras_contexto)
+        )
+        consulta_busca = montar_consulta_busca_feira(
             mensagem,
-            contexto_conversa=contexto_roteador,
+            feiras_contexto,
+        )
+        consulta_rag = (
+            f"{contexto_feira}\n{mensagem}"
+            if feiras_contexto
+            else mensagem
         )
         print(
             f"[FONTES] rag={exige_rag} | tavily={exige_busca_web} | "
@@ -2560,7 +2644,10 @@ def classificar_resumo_api(
         resultados_rag = []
         if exige_rag:
             try:
-                candidatos_rag = buscar_no_rag(mensagem)
+                candidatos_rag = buscar_no_rag(
+                    consulta_rag,
+                    feiras_contexto=feiras_contexto,
+                )
                 resultados_rag = filtrar_resultados_rag(candidatos_rag)
             except Exception as erro:
                 print(f"[RAG] Erro na busca: {erro}")
@@ -2572,11 +2659,12 @@ def classificar_resumo_api(
             mensagem=mensagem,
             resultados_rag=resultados_rag,
             rag_consultado=exige_rag,
+            feiras_contexto=feiras_contexto,
         )
         busca_exige_atualidade = bool(re.search(
             r"\b(cronograma|calend[aá]rio|prazo|inscri[cç][aã]o|data(?:s)?|"
             r"per[ií]odo|abertura|encerramento|submiss[aã]o|edi[cç][aã]o vigente)\b",
-            mensagem or "",
+            f"{mensagem} {contexto_roteador_feira}",
             flags=re.IGNORECASE,
         )) and not bool(re.search(
             r"\b(hist[oó]ric[oa]|antig[oa]s?|edi[cç][oõ]es anteriores|"
@@ -2618,6 +2706,7 @@ def classificar_resumo_api(
                 "arquivo": item["arquivo"],
                 "pagina": item["pagina"],
                 "similaridade": round(item["similaridade"], 4),
+                "feira_id": item.get("feira_id", "não identificada"),
             }
             for item in resultados_rag
         ]
@@ -2630,7 +2719,7 @@ def classificar_resumo_api(
                     titulo=conversa.titulo,
                     fontes_rag=fontes_rag,
                     usar_pesquisa_web=exige_busca_web,
-                    consulta_busca=mensagem,
+                    consulta_busca=consulta_busca,
                     exigir_atualidade_fontes=busca_exige_atualidade,
                     mensagem_assistente_substituir_id=mensagem_assistente_substituir_id,
                 ),
@@ -2649,7 +2738,7 @@ def classificar_resumo_api(
             # A pesquisa externa é executada pelo backend via Tavily.
             usar_pesquisa_web=exige_busca_web,
             retornar_fontes=True,
-            consulta_busca=mensagem,
+            consulta_busca=consulta_busca,
             exigir_atualidade_fontes=busca_exige_atualidade,
         )
         resposta_ia, fontes_web, busca_web_executada = resposta_gerada
