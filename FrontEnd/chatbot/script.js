@@ -1613,7 +1613,9 @@ function adicionarAcoesGeracao(elemento, controller) {
 function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
   if (!elemento || elemento.classList.contains("chat-error")) return null;
   const proximo = elemento.nextElementSibling;
-  if (proximo?.classList.contains("sfai-message-actions")) {
+  if (proximo?.classList.contains("sfai-message-footer")) {
+    proximo.remove();
+  } else if (proximo?.classList.contains("sfai-message-actions")) {
     proximo.remove();
   }
 
@@ -1651,7 +1653,10 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
     ["bullets", "Transformar em tópicos"],
     ["export", "Exportar resposta"],
   ];
-  if (elemento.querySelector(".rag-fontes-dropdown")) {
+  if (
+    elemento.querySelector(".rag-fontes-dropdown") ||
+    elemento.nextElementSibling?.querySelector(".rag-fontes-dropdown")
+  ) {
     opcoesMenu.push(["sources", "Abrir fontes consultadas"]);
   }
   if (elemento.querySelector("pre code")) {
@@ -1756,7 +1761,9 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
     }
 
     if (acao === "sources") {
-      const fontesEl = elemento.querySelector(".rag-fontes-dropdown");
+      const fontesEl =
+        elemento.querySelector(".rag-fontes-dropdown") ||
+        elemento.nextElementSibling?.querySelector(".rag-fontes-dropdown");
       if (fontesEl) {
         fontesEl.open = true;
         fontesEl.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1789,11 +1796,26 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
 
     if (comandos[acao]) {
       mais.open = false;
-      void enviarMensagem(comandos[acao]);
+      const rotulos = {
+        simplify: "Explicar de forma mais simples",
+        summarize: "Criar um resumo",
+        expand: "Aprofundar a resposta",
+        bullets: "Transformar em tópicos",
+      };
+      void enviarMensagem(rotulos[acao], {
+        transformacao: acao,
+        respostaAlvo: String(texto || ""),
+      });
     }
   });
 
-  elemento.insertAdjacentElement("afterend", barra);
+  // Fontes e ações compartilham a mesma linha de rodapé.
+  const rodape = document.createElement("div");
+  rodape.className = "sfai-message-footer";
+  const fontesElemento = elemento.querySelector(".rag-fontes");
+  if (fontesElemento) rodape.appendChild(fontesElemento);
+  rodape.appendChild(barra);
+  elemento.insertAdjacentElement("afterend", rodape);
   return barra;
 }
 
@@ -1804,6 +1826,7 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
   const userMessage = (
     typeof mensagemOverride === "string" ? mensagemOverride : input.value
   ).trim();
+  const transformacao = opcoes.transformacao || "";
   if (userMessage === "") return;
 
   if (!regenerando && userMessage === SECRET_CLEAR_CODE) {
@@ -1905,6 +1928,8 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
         mensagem: userMessage,
         stream: modo === "conversa",
         regenerar: regenerando,
+        acao_resposta: transformacao || null,
+        resposta_alvo: transformacao ? (opcoes.respostaAlvo || "") : null,
       }),
     });
 
@@ -2017,19 +2042,13 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
       }
 
       if (regenerando) {
+        opcoes.substituirElemento?.nextElementSibling?.remove();
         opcoes.substituirElemento?.remove();
-        opcoes.toolbarAnterior?.remove();
       }
 
-      if (modo === "conversa") {
-        adicionarAcoesMensagem(aiElement, textoIA, fontesResposta, {
-          allowRegenerate: true,
-        });
-      } else {
-        adicionarAcoesMensagem(aiElement, textoIA, fontesResposta, {
-          allowRegenerate: false,
-        });
-      }
+      adicionarAcoesMensagem(aiElement, textoIA, fontesResposta, {
+        allowRegenerate: modo === "conversa" && !transformacao,
+      });
 
       chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
       salvarConversaAtual();
