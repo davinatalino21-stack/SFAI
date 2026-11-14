@@ -525,7 +525,7 @@ def pergunta_exige_calendario_atual(mensagem: str, contexto_conversa: str = "") 
     texto = f"{contexto_conversa or ''} {mensagem or ''}".lower()
 
     menciona_feira = bool(re.search(
-        r"\b(febrace|mostratec|feira(?:s)? de ci[eê]ncias?)\b",
+        r"\b(febrace|mostratec|feira(?:s)? de ci[eê]ncias?|ci[eê]ncias?\s+para\s+todos|semi[aá]rido potiguar)\b",
         texto,
         flags=re.IGNORECASE,
     ))
@@ -1635,9 +1635,10 @@ def pergunta_exige_rag(
 
     padroes_documentais = [
         r"\b(febrace|mostratec|sfai)\b",
+        r"\b(ci[eê]ncias?\s+para\s+todos|semi[aá]rido\s+potiguar)\b",
         r"\b(feiras?\s+de\s+(?:ci[eê]ncia|ci[eê]ncias|tecnologia|inova[cç][aã]o))\b",
         r"\b(regulamento|edital|manual|documenta[cç][aã]o|normas? da feira|regras? da feira)\b",
-        r"\b(inscri[cç][aã]o|inscrever|submiss[aã]o|prazo de envio|resumo expandido)\b",
+        r"\b(inscri[cç][aã]o|inscrever|submiss[aã]o|particip\w*|prazo de envio|resumo expandido)\b",
         r"\b(classificar|classifica[cç][aã]o|categoria|categorias|subcategoria|subcategorias)\b",
         r"\b(crit[eé]rios? de avalia[cç][aã]o|avalia[cç][aã]o do projeto|banca avaliadora|julgamento do projeto)\b",
         r"\b(projeto cient[ií]fico|projeto de pesquisa|resumo do projeto|apresenta[cç][aã]o do projeto)\b",
@@ -2572,8 +2573,8 @@ def classificar_resumo_api(
     # ========================================================
 
     if modo == "conversa":
-        # Busca somente as 5 mensagens mais recentes: 4 de histórico + a
-        # mensagem atual, que será enviada separadamente no prompt.
+        # Consulta o histórico recente para resolver entidades da conversa.
+        # O texto enviado à IA continua limitado a quatro mensagens anteriores.
         consulta_mensagens_recentes = db.query(Mensagem).filter(
             Mensagem.conversa_id == id_conversa_uuid
         )
