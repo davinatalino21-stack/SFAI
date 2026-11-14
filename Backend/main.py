@@ -1710,7 +1710,7 @@ def buscar_no_rag(
 
     classificacoes_documentos = {
         chave: classificar_documento_feira(
-            os.path.basename(str(chave)),
+            str(chave),
             "\n".join(textos),
         )
         for chave, textos in textos_documentos.items()
