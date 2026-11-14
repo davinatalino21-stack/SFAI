@@ -742,7 +742,7 @@ function converterCitacoesEmLinks(texto, fontes) {
 
   // Citações geradas a partir dos resultados da Tavily: [web:1], [web:2]...
   // A numeração corresponde à ordem das fontes retornadas pelo backend.
-  texto = texto.replace(/\\[web:(\\d+)\\]/gi, (match, numero) => {
+  texto = texto.replace(/\[web:(\d+)\]/gi, (match, numero) => {
     const fonte = fontesWeb[Number(numero) - 1];
     if (!fonte) return "[Fonte web " + numero + " indisponível]";
 
