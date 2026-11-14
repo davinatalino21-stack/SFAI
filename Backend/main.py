@@ -615,6 +615,8 @@ def registrar_ferramentas_executadas(
     dentro do ciclo interno da ferramenta.
     """
     fontes_candidatas = []
+    fontes_web = []
+    urls_vistas = set()
     browser_executado = False
 
     try:
@@ -663,28 +665,63 @@ def registrar_ferramentas_executadas(
                 if not re.match(r"^https?://", url, flags=re.IGNORECASE):
                     continue
 
-                fontes_candidatas.append({
+                chave = re.sub(
+                    r"([?&])(utm_[^=&]+|fbclid|gclid)=[^&]*",
+                    "",
+                    url,
+                    flags=re.IGNORECASE,
+                )
+                chave = re.sub(r"[?&]$", "", chave).rstrip("/").lower()
+                if chave in urls_vistas:
+                    continue
+                urls_vistas.add(chave)
+
+                fonte = {
                     "tipo": "web",
                     "titulo": titulo[:300],
                     "url": url[:2000],
-                })
+                }
+                fontes_candidatas.append(fonte)
+                fontes_web.append(fonte)
 
     except Exception as erro:
         print(f"[GROQ][TOOLS] Não foi possível ler executed_tools: {erro}")
 
-    fontes_web = selecionar_fontes_web(
+    fontes_prioritarias = selecionar_fontes_web(
         fontes_candidatas,
         consulta_usuario=consulta_usuario,
         exigir_atualidade=exigir_atualidade,
     )
+    urls_prioritarias = {
+        re.sub(
+            r"([?&])(utm_[^=&]+|fbclid|gclid)=[^&]*",
+            "",
+            fonte["url"],
+            flags=re.IGNORECASE,
+        ).rstrip("/").lower()
+        for fonte in fontes_prioritarias
+    }
 
+    # Mantém a lista COMPLETA e na ordem original, pois as citações nativas
+    # [1], [2], [3] da Groq usam essa posição. Apenas marcamos destaques para
+    # o frontend exibir até 5 fontes sem quebrar os links das citações.
     for fonte in fontes_web:
-        print(f"[GROQ][BROWSER] {fonte['titulo']} | {fonte['url']}")
+        chave = re.sub(
+            r"([?&])(utm_[^=&]+|fbclid|gclid)=[^&]*",
+            "",
+            fonte["url"],
+            flags=re.IGNORECASE,
+        ).rstrip("/").lower()
+        fonte["destaque"] = chave in urls_prioritarias
+        if fonte["destaque"]:
+            print(f"[GROQ][BROWSER] {fonte['titulo']} | {fonte['url']}")
 
     print(
         f"[GROQ][WEB] executado={browser_executado} | "
         f"fontes_recebidas={len(fontes_candidatas)} | "
-        f"fontes_retidas={len(fontes_web)} | limite={GROQ_WEB_MAX_SOURCES}"
+        f"fontes_unicas={len(fontes_web)} | "
+        f"fontes_em_destaque={len(fontes_prioritarias)} | "
+        f"limite_destaques={GROQ_WEB_MAX_SOURCES}"
     )
     return fontes_web, browser_executado
 
