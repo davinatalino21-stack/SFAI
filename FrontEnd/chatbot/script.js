@@ -385,7 +385,7 @@ function carregarChartJs() {
 
 function validarConfigGrafico(config) {
   const tipos = ["line", "bar", "pie", "doughnut", "scatter"];
-  if (!tipos.includes(config.type)) return false;
+  if (!config || !tipos.includes(config.type)) return false;
   if (!Array.isArray(config.datasets) || config.datasets.length < 1 || config.datasets.length > 6) return false;
 
   if (config.type === "scatter") {
@@ -400,6 +400,17 @@ function validarConfigGrafico(config) {
   }
 
   if (!Array.isArray(config.labels) || config.labels.length < 1 || config.labels.length > 40) return false;
+
+  // Pizza e rosca usam uma única série; label do dataset é opcional.
+  if (config.type === "pie" || config.type === "doughnut") {
+    if (config.datasets.length !== 1) return false;
+    const dataset = config.datasets[0];
+    return Array.isArray(dataset.data) &&
+      dataset.data.length === config.labels.length &&
+      dataset.data.every((valor) => Number.isFinite(Number(valor)) && Number(valor) >= 0) &&
+      dataset.data.some((valor) => Number(valor) > 0);
+  }
+
   return config.datasets.every((dataset) =>
     typeof dataset.label === "string" &&
     Array.isArray(dataset.data) &&
@@ -457,13 +468,28 @@ async function renderizarGraficos(elemento) {
         type: tipo,
         data: {
           labels: config.labels,
-          datasets: config.datasets.map((dataset) => ({
-            label: dataset.label || "Dados",
-            data: dataset.data,
-            tension: 0.25,
-            fill: false,
-            borderWidth: 2,
-          })),
+          datasets: config.datasets.map((dataset) => {
+            const datasetConfig = {
+              label: dataset.label || (tipo === "pie" || tipo === "doughnut" ? "Proporções" : "Dados"),
+              data: dataset.data,
+              tension: 0.25,
+              fill: false,
+              borderWidth: 2,
+            };
+
+            if (tipo === "pie" || tipo === "doughnut") {
+              const paleta = [
+                "#38bdf8", "#2dd4bf", "#818cf8", "#fbbf24",
+                "#fb7185", "#a3e635", "#c084fc", "#fb923c",
+                "#22d3ee", "#f472b6"
+              ];
+              datasetConfig.backgroundColor = dataset.data.map((_, indice) => paleta[indice % paleta.length]);
+              datasetConfig.borderColor = "rgba(15, 23, 42, 0.75)";
+              datasetConfig.borderWidth = 2;
+            }
+
+            return datasetConfig;
+          }),
         },
         options: opcoes,
       });
