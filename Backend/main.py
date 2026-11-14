@@ -27,7 +27,7 @@ from huggingface_hub import HfApi, hf_hub_download
 from google_auth import verificar_credential
 from google import genai
 from google.genai import types
-from groq import Groq
+from groq import Groq, RateLimitError
 from sqlalchemy.orm import Session
 from sqlalchemy import text as texto_sql
 from database import SessionLocal
@@ -357,7 +357,9 @@ client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # A Groq é responsável por toda geração de texto.
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+# Desativa retries automáticos: em limites TPD/TPM eles apenas repetem uma
+# chamada que não poderá ser atendida durante o período de bloqueio.
+groq_client = Groq(api_key=GROQ_API_KEY, max_retries=0) if GROQ_API_KEY else None
 
 
 # ============================================================
@@ -408,9 +410,10 @@ SYSTEM_PROMPT_CHAT_RAG = (
     "reais dos documentos recuperados e dos sites visitados. Não diga que pesquisou "
     "na internet se a ferramenta não foi executada.\n\n"
     "POLÍTICA DE PESQUISA COM CONTROLE DE CUSTO:\n"
-    "Quando Browser Search estiver disponível, faça uma busca objetiva e encerre a pesquisa assim que houver evidência suficiente. "
-    "Use no máximo 3 fontes independentes para sustentar a resposta e abra no máximo 2 páginas; não faça buscas exploratórias, "
-    "não repita consultas com pequenas variações e não abra páginas apenas para aumentar a quantidade de fontes. "
+    "Quando Browser Search estiver disponível, faça somente uma chamada de browser_search para a consulta inicial. "
+    "Use os snippets retornados como fonte principal e abra no máximo UMA página, somente se o snippet não trouxer a informação necessária. "
+    "Não use browser.find, não faça uma segunda chamada de browser_search e não repita consultas com pequenas variações. "
+    "Não abra páginas apenas para aumentar a quantidade de fontes; encerre assim que houver evidência suficiente. "
     "Priorize páginas oficiais e atuais, especialmente editais, calendários e comunicados da própria organização. "
     "Para prazos e cronogramas, descarte resultados que apontem claramente para edições antigas, blogs pessoais ou páginas sem relação direta. "
     "Se duas fontes oficiais/confiáveis já confirmarem a informação, pare. Se não encontrar evidência suficiente dentro desse limite, "
@@ -536,6 +539,41 @@ def _obter_campo(objeto, nome: str, padrao=None):
 def estimar_tokens_aproximados(texto: str) -> int:
     """Estimativa simples para diagnóstico; não substitui a contagem da Groq."""
     return (len(texto or "") + 3) // 4
+
+
+def obter_retry_after_segundos(erro) -> int | None:
+    """Extrai o tempo de espera indicado pela Groq, quando disponível."""
+    resposta_http = getattr(erro, "response", None)
+    headers = getattr(resposta_http, "headers", {}) or {}
+    retry_header = headers.get("retry-after") if hasattr(headers, "get") else None
+
+    if retry_header:
+        try:
+            return max(1, math.ceil(float(retry_header)))
+        except (TypeError, ValueError):
+            pass
+
+    corpo = getattr(erro, "body", None)
+    mensagem = ""
+    if isinstance(corpo, dict):
+        erro_corpo = corpo.get("error", corpo)
+        if isinstance(erro_corpo, dict):
+            mensagem = str(erro_corpo.get("message") or "")
+    texto_erro = mensagem or str(erro)
+
+    # Exemplo retornado pela API: "Please try again in 11m16.08s".
+    correspondencia = re.search(
+        r"try again in\\s+(?:(\\d+)\\s*h)?\\s*(?:(\\d+)\\s*m)?\\s*(\\d+(?:\\.\\d+)?)\\s*s",
+        texto_erro,
+        flags=re.IGNORECASE,
+    )
+    if not correspondencia:
+        return None
+
+    horas = int(correspondencia.group(1) or 0)
+    minutos = int(correspondencia.group(2) or 0)
+    segundos = float(correspondencia.group(3) or 0)
+    return max(1, math.ceil(horas * 3600 + minutos * 60 + segundos))
 
 
 def selecionar_fontes_web(
@@ -793,7 +831,43 @@ def gerar_texto(
             "não inclui resultados nem navegação interna da Browser Search)"
         )
 
-    resposta = groq_client.chat.completions.create(**parametros)
+    try:
+        resposta = groq_client.chat.completions.create(**parametros)
+    except RateLimitError as erro:
+        retry_after = obter_retry_after_segundos(erro)
+        print(
+            "[GROQ][RATE_LIMIT] HTTP 429 recebido | "
+            f"retry_after={retry_after if retry_after is not None else 'não informado'}s"
+        )
+        mensagem_usuario = (
+            "O serviço de IA atingiu o limite temporário de uso. "
+            "Aguarde a renovação da cota e tente novamente."
+        )
+        if retry_after is not None:
+            minutos = retry_after // 60
+            segundos = retry_after % 60
+            if minutos:
+                prazo = f"{minutos} min e {segundos} s"
+            else:
+                prazo = f"{segundos} s"
+            mensagem_usuario = (
+                "O serviço de IA atingiu o limite de uso. "
+                f"Tente novamente em aproximadamente {prazo}."
+            )
+
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "code": "groq_rate_limit",
+                "message": mensagem_usuario,
+                "retry_after_seconds": retry_after,
+            },
+            headers=(
+                {"Retry-After": str(retry_after)}
+                if retry_after is not None
+                else None
+            ),
+        ) from erro
 
     fontes_web = []
     browser_executado = False
