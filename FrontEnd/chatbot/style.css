@@ -613,6 +613,12 @@
   box-shadow: none;
 }
 
+.input-text textarea:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
 .input-text textarea {
   flex: 1;
   min-width: 0;
