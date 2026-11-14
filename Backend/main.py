@@ -2852,7 +2852,11 @@ def classificar_resumo_api(
             or pergunta_exige_busca_web_feira(mensagem, feiras_contexto)
         )
         consulta_busca = montar_consulta_busca_feira(
-            mensagem,
+            (
+                f"{mensagem}\n{contexto_visual[:500]}"
+                if contexto_visual
+                else mensagem
+            ),
             feiras_contexto,
         )
         consulta_rag = (
