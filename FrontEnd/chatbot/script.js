@@ -1693,6 +1693,7 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
   };
   atualizarBotoesFeedback();
 
+  let temporizadorFeedbackCopia = null;
   barra.addEventListener("click", async (evento) => {
     const botao = evento.target.closest("button[data-action]");
     if (!botao || botao.disabled) return;
@@ -1704,6 +1705,16 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
         botao.classList.add("is-selected");
         botao.title = "Copiado";
         botao.setAttribute("aria-label", "Copiado");
+
+        if (temporizadorFeedbackCopia) {
+          clearTimeout(temporizadorFeedbackCopia);
+        }
+        temporizadorFeedbackCopia = setTimeout(() => {
+          botao.classList.remove("is-selected");
+          botao.title = "Copiar";
+          botao.setAttribute("aria-label", "Copiar");
+          temporizadorFeedbackCopia = null;
+        }, 1100);
       } catch (erro) {
         console.error("Falha ao copiar resposta:", erro);
         botao.title = "Não foi possível copiar";
