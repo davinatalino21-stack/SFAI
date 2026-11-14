@@ -40,6 +40,7 @@ function separarContextoVisualSalvo(conteudo) {
 function adicionarIndicadorImagem(elemento, quantidade = 1) {
   const indicador = document.createElement("div");
   indicador.className = "sfai-image-attachment-indicator";
+  indicador.title = "A análise visual foi preservada no histórico; a foto original não é armazenada.";
   const icone = document.createElement("span");
   icone.setAttribute("aria-hidden", "true");
   icone.textContent = "▧";
@@ -104,50 +105,84 @@ function lerArquivoComoDataURL(arquivo) {
   });
 }
 
+async function adicionarArquivosImagem(arquivos) {
+  const listaArquivos = Array.from(arquivos || []);
+  if (!listaArquivos.length) return;
+
+  const espacoDisponivel = MAX_IMAGENS_MENSAGEM - imagensAnexadas.length;
+  const avisos = [];
+  if (listaArquivos.length > espacoDisponivel) {
+    avisos.push("O limite é de 3 imagens por mensagem.");
+  }
+
+  for (const arquivo of listaArquivos.slice(0, Math.max(0, espacoDisponivel))) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(arquivo.type)) {
+      avisos.push(`${arquivo.name || "Imagem"}: use JPEG, PNG ou WebP.`);
+      continue;
+    }
+    if (arquivo.size <= 0 || arquivo.size > MAX_TAMANHO_IMAGEM) {
+      avisos.push(`${arquivo.name || "Imagem"}: cada imagem deve ter no máximo 10 MB.`);
+      continue;
+    }
+    const tamanhoAtual = imagensAnexadas.reduce(
+      (total, anexo) => total + anexo.tamanho,
+      0,
+    );
+    if (tamanhoAtual + arquivo.size > MAX_TAMANHO_TOTAL_IMAGENS) {
+      avisos.push("O conjunto de imagens deve ter no máximo 14 MB no total.");
+      continue;
+    }
+    try {
+      const dataUrl = await lerArquivoComoDataURL(arquivo);
+      imagensAnexadas.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        nome: arquivo.name || "Imagem colada",
+        tamanho: arquivo.size,
+        dataUrl,
+      });
+    } catch (erro) {
+      avisos.push(erro.message);
+    }
+  }
+
+  renderizarPreviaImagens();
+  if (imageStatus) {
+    imageStatus.textContent = avisos.length
+      ? avisos.join(" ")
+      : (imagensAnexadas.length
+        ? `${imagensAnexadas.length}/${MAX_IMAGENS_MENSAGEM} imagens anexadas`
+        : "");
+  }
+}
+
 if (imageAttachButton && imageInput) {
   imageAttachButton.addEventListener("click", () => imageInput.click());
   imageInput.addEventListener("change", async () => {
     const arquivos = Array.from(imageInput.files || []);
     imageInput.value = "";
+    await adicionarArquivosImagem(arquivos);
+  });
+
+  // Ctrl+V, Shift+Insert e "Colar" no menu de contexto disparam o mesmo
+  // evento paste quando o foco está no campo de mensagem.
+  input.addEventListener("paste", (event) => {
+    const clipboard = event.clipboardData;
+    if (!clipboard) return;
+
+    const itensImagem = Array.from(clipboard.items || [])
+      .filter((item) => item.kind === "file" && item.type.startsWith("image/"));
+    let arquivos = itensImagem
+      .map((item) => item.getAsFile())
+      .filter(Boolean);
+
+    if (!arquivos.length) {
+      arquivos = Array.from(clipboard.files || [])
+        .filter((arquivo) => arquivo.type.startsWith("image/"));
+    }
     if (!arquivos.length) return;
 
-    const espacoDisponivel = MAX_IMAGENS_MENSAGEM - imagensAnexadas.length;
-    const avisos = [];
-    if (arquivos.length > espacoDisponivel) {
-      avisos.push("O limite é de 3 imagens por mensagem.");
-    }
-
-    for (const arquivo of arquivos.slice(0, Math.max(0, espacoDisponivel))) {
-      if (!["image/jpeg", "image/png", "image/webp"].includes(arquivo.type)) {
-        avisos.push(`${arquivo.name}: use JPEG, PNG ou WebP.`);
-        continue;
-      }
-      if (arquivo.size <= 0 || arquivo.size > MAX_TAMANHO_IMAGEM) {
-        avisos.push(`${arquivo.name}: cada imagem deve ter no máximo 10 MB.`);
-        continue;
-      }
-      const tamanhoAtual = imagensAnexadas.reduce(
-        (total, anexo) => total + anexo.tamanho,
-        0,
-      );
-      if (tamanhoAtual + arquivo.size > MAX_TAMANHO_TOTAL_IMAGENS) {
-        avisos.push("O conjunto de imagens deve ter no máximo 14 MB no total.");
-        continue;
-      }
-      try {
-        const dataUrl = await lerArquivoComoDataURL(arquivo);
-        imagensAnexadas.push({
-          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          nome: arquivo.name,
-          tamanho: arquivo.size,
-          dataUrl,
-        });
-      } catch (erro) {
-        avisos.push(erro.message);
-      }
-    }
-    renderizarPreviaImagens();
-    if (avisos.length && imageStatus) imageStatus.textContent = avisos.join(" ");
+    event.preventDefault();
+    void adicionarArquivosImagem(arquivos);
   });
 }
 
