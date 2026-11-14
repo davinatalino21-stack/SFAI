@@ -1024,6 +1024,106 @@ async function digitarTexto(elemento, html, velocidade = 5) {
   await renderizarMatematica(elemento);
 }
 
+async function consumirRespostaSSE(response, elemento) {
+  if (!response.body) {
+    throw new Error("O navegador não conseguiu abrir o fluxo da resposta.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+  let resultadoFinal = null;
+  let textoRecebido = "";
+
+  function processarEvento(bloco) {
+    if (!bloco.trim()) return;
+
+    let tipoEvento = "message";
+    const linhasDados = [];
+
+    for (const linha of bloco.split(/\r?\n/)) {
+      if (linha.startsWith("event:")) {
+        tipoEvento = linha.slice(6).trim();
+      } else if (linha.startsWith("data:")) {
+        linhasDados.push(linha.slice(5).trimStart());
+      }
+    }
+
+    if (!linhasDados.length) return;
+
+    let payload;
+    try {
+      payload = JSON.parse(linhasDados.join("\n"));
+    } catch {
+      throw new Error("O servidor enviou um evento de resposta inválido.");
+    }
+
+    if (tipoEvento === "delta") {
+      const trecho = String(payload.content || "");
+      if (trecho) {
+        textoRecebido += trecho;
+        elemento.textContent = textoRecebido;
+        chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "auto" });
+      }
+      return;
+    }
+
+    if (tipoEvento === "done") {
+      resultadoFinal = payload;
+      return;
+    }
+
+    if (tipoEvento === "error") {
+      const detalhe = payload?.detail;
+      const mensagem = typeof detalhe === "string"
+        ? detalhe
+        : (detalhe?.message || "Não foi possível concluir a geração da resposta.");
+      const erro = new Error(mensagem);
+      erro.sfaIUserMessage = true;
+      throw erro;
+    }
+  }
+
+  try {
+    while (!resultadoFinal) {
+      const { value, done } = await reader.read();
+      if (value) {
+        buffer += decoder.decode(value, { stream: !done });
+      }
+
+      const blocos = buffer.split(/\r?\n\r?\n/);
+      buffer = blocos.pop() || "";
+
+      for (const bloco of blocos) {
+        processarEvento(bloco);
+        if (resultadoFinal) break;
+      }
+
+      if (done) break;
+    }
+
+    if (buffer.trim() && !resultadoFinal) {
+      processarEvento(buffer);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  if (!resultadoFinal) {
+    throw new Error(
+      textoRecebido
+        ? "A conexão foi encerrada antes de a resposta terminar."
+        : "O servidor encerrou o fluxo sem enviar uma resposta.",
+    );
+  }
+
+  if (typeof resultadoFinal.resultado === "string") {
+    elemento.textContent = resultadoFinal.resultado;
+  }
+
+  return resultadoFinal;
+}
+
 input.addEventListener("input", ajustarAlturaTextarea);
 ajustarAlturaTextarea();
 
@@ -1508,6 +1608,7 @@ async function enviarMensagem() {
         feira: feiraMapeada,
         modo: modo,
         mensagem: userMessage,
+        stream: modo === "conversa",
       }),
     });
 
@@ -1518,7 +1619,20 @@ async function enviarMensagem() {
       return;
     }
 
-    const data = await response.json();
+    let data;
+    let respostaEmStreaming = false;
+
+    if (!response.ok) {
+      data = await response.json();
+    } else if (
+      modo === "conversa" &&
+      response.headers.get("content-type")?.includes("text/event-stream")
+    ) {
+      respostaEmStreaming = true;
+      data = await consumirRespostaSSE(response, aiElement);
+    } else {
+      data = await response.json();
+    }
 
     if (!response.ok) {
       const detalhe = data?.detail;
@@ -1589,7 +1703,12 @@ async function enviarMensagem() {
       const textoFormatado = formatarRespostaIA(textoIA, fontesResposta);
 
       chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
-      await digitarTexto(aiElement, textoFormatado, 6);
+      if (respostaEmStreaming) {
+        aiElement.innerHTML = textoFormatado;
+        await renderizarMatematica(aiElement);
+      } else {
+        await digitarTexto(aiElement, textoFormatado, 6);
+      }
 
       salvarConversaAtual();
     } else {
@@ -1599,7 +1718,13 @@ async function enviarMensagem() {
     }
   } catch (erro) {
     aiElement.classList.add("chat-error");
-    aiElement.innerHTML = `<span class="chat-error-msg">Erro de conexão com o servidor de IA. Verifique sua internet e tente novamente.</span>`;
+    const mensagemErro = erro?.sfaIUserMessage
+      ? erro.message
+      : "Erro de conexão com o servidor de IA. Verifique sua internet e tente novamente.";
+    const erroSpan = document.createElement("span");
+    erroSpan.className = "chat-error-msg";
+    erroSpan.textContent = mensagemErro;
+    aiElement.replaceChildren(erroSpan);
     console.error("Erro no Fetch:", erro);
   }
 }
