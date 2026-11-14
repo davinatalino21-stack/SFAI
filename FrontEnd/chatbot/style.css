@@ -484,6 +484,112 @@
   background: var(--surface);
 }
 
+.attach-image-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color .18s ease, background .18s ease, border-color .18s ease;
+}
+
+.attach-image-btn:hover,
+.attach-image-btn:focus-visible {
+  color: var(--text);
+  background: var(--surface-hover);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.attach-image-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sfai-image-preview-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 8px 14px 0;
+}
+
+.sfai-image-preview-list[hidden],
+.sfai-image-status:empty {
+  display: none;
+}
+
+.sfai-image-preview-item {
+  position: relative;
+  width: 66px;
+  height: 58px;
+}
+
+.sfai-image-preview-item img,
+.sfai-user-image-thumbnails img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-soft);
+}
+
+.sfai-image-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sfai-image-status {
+  padding: 4px 14px 0;
+  color: var(--text-secondary);
+  font-size: .76rem;
+}
+
+.sfai-user-image-thumbnails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 9px;
+  max-width: min(360px, 100%);
+}
+
+.sfai-user-image-thumbnails img {
+  width: 92px;
+  height: 78px;
+}
+
+.sfai-image-attachment-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: .76rem;
+}
+
 .feira-selector {
   position: relative;
   display: flex;
@@ -1235,7 +1341,8 @@
     gap: 8px;
   }
 
-  .options-input-area {
+  .options-input-area,
+  .attach-image-btn {
     width: 42px;
     height: 42px;
   }

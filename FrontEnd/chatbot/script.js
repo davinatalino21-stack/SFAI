@@ -1,4 +1,13 @@
 const input = document.getElementById("user-input");
+const imageInput = document.getElementById("image-input");
+const imageAttachButton = document.getElementById("image-attach-button");
+const imagePreviewList = document.getElementById("image-preview-list");
+const imageStatus = document.getElementById("image-status");
+const MARCADOR_CONTEXTO_VISUAL = "\n\n[SFAI_CONTEXT_VISUAL]\n";
+const MAX_IMAGENS_MENSAGEM = 3;
+const MAX_TAMANHO_IMAGEM = 10 * 1024 * 1024;
+const MAX_TAMANHO_TOTAL_IMAGENS = 14 * 1024 * 1024;
+let imagensAnexadas = [];
 const chatArea = document.getElementById("chat-area");
 const chatContainer = document.getElementById("chat-container");
 const modeBadge = document.getElementById("modeBadge");
@@ -20,6 +29,127 @@ if (chatContainer && "MutationObserver" in window) {
   });
 }
 syncLayoutState();
+
+function separarContextoVisualSalvo(conteudo) {
+  const texto = String(conteudo || "");
+  const indice = texto.indexOf(MARCADOR_CONTEXTO_VISUAL);
+  if (indice < 0) return { texto, temImagem: false };
+  return { texto: texto.slice(0, indice).trim(), temImagem: true };
+}
+
+function adicionarIndicadorImagem(elemento, quantidade = 1) {
+  const indicador = document.createElement("div");
+  indicador.className = "sfai-image-attachment-indicator";
+  const icone = document.createElement("span");
+  icone.setAttribute("aria-hidden", "true");
+  icone.textContent = "▧";
+  const rotulo = document.createElement("span");
+  rotulo.textContent = quantidade > 1
+    ? `${quantidade} imagens analisadas`
+    : "Imagem analisada";
+  indicador.append(icone, rotulo);
+  elemento.appendChild(indicador);
+}
+
+function adicionarMiniaturasImagem(elemento, imagens) {
+  if (!Array.isArray(imagens) || !imagens.length) return;
+  const grade = document.createElement("div");
+  grade.className = "sfai-user-image-thumbnails";
+  imagens.forEach((dataUrl, indice) => {
+    const imagem = document.createElement("img");
+    imagem.src = dataUrl;
+    imagem.alt = `Imagem anexada ${indice + 1}`;
+    imagem.loading = "lazy";
+    grade.appendChild(imagem);
+  });
+  elemento.appendChild(grade);
+}
+
+function renderizarPreviaImagens() {
+  if (!imagePreviewList) return;
+  imagePreviewList.replaceChildren();
+  imagePreviewList.hidden = imagensAnexadas.length === 0;
+  imagensAnexadas.forEach((anexo) => {
+    const item = document.createElement("div");
+    item.className = "sfai-image-preview-item";
+    const imagem = document.createElement("img");
+    imagem.src = anexo.dataUrl;
+    imagem.alt = anexo.nome;
+    const remover = document.createElement("button");
+    remover.type = "button";
+    remover.className = "sfai-image-remove";
+    remover.textContent = "×";
+    remover.title = `Remover ${anexo.nome}`;
+    remover.setAttribute("aria-label", remover.title);
+    remover.addEventListener("click", () => {
+      imagensAnexadas = imagensAnexadas.filter((atual) => atual.id !== anexo.id);
+      renderizarPreviaImagens();
+    });
+    item.append(imagem, remover);
+    imagePreviewList.appendChild(item);
+  });
+  if (imageStatus) {
+    imageStatus.textContent = imagensAnexadas.length
+      ? `${imagensAnexadas.length}/${MAX_IMAGENS_MENSAGEM} imagens anexadas`
+      : "";
+  }
+}
+
+function lerArquivoComoDataURL(arquivo) {
+  return new Promise((resolve, reject) => {
+    const leitor = new FileReader();
+    leitor.onload = () => resolve(String(leitor.result || ""));
+    leitor.onerror = () => reject(new Error(`Não foi possível ler ${arquivo.name}.`));
+    leitor.readAsDataURL(arquivo);
+  });
+}
+
+if (imageAttachButton && imageInput) {
+  imageAttachButton.addEventListener("click", () => imageInput.click());
+  imageInput.addEventListener("change", async () => {
+    const arquivos = Array.from(imageInput.files || []);
+    imageInput.value = "";
+    if (!arquivos.length) return;
+
+    const espacoDisponivel = MAX_IMAGENS_MENSAGEM - imagensAnexadas.length;
+    const avisos = [];
+    if (arquivos.length > espacoDisponivel) {
+      avisos.push("O limite é de 3 imagens por mensagem.");
+    }
+
+    for (const arquivo of arquivos.slice(0, Math.max(0, espacoDisponivel))) {
+      if (!["image/jpeg", "image/png", "image/webp"].includes(arquivo.type)) {
+        avisos.push(`${arquivo.name}: use JPEG, PNG ou WebP.`);
+        continue;
+      }
+      if (arquivo.size <= 0 || arquivo.size > MAX_TAMANHO_IMAGEM) {
+        avisos.push(`${arquivo.name}: cada imagem deve ter no máximo 10 MB.`);
+        continue;
+      }
+      const tamanhoAtual = imagensAnexadas.reduce(
+        (total, anexo) => total + anexo.tamanho,
+        0,
+      );
+      if (tamanhoAtual + arquivo.size > MAX_TAMANHO_TOTAL_IMAGENS) {
+        avisos.push("O conjunto de imagens deve ter no máximo 14 MB no total.");
+        continue;
+      }
+      try {
+        const dataUrl = await lerArquivoComoDataURL(arquivo);
+        imagensAnexadas.push({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          nome: arquivo.name,
+          tamanho: arquivo.size,
+          dataUrl,
+        });
+      } catch (erro) {
+        avisos.push(erro.message);
+      }
+    }
+    renderizarPreviaImagens();
+    if (avisos.length && imageStatus) imageStatus.textContent = avisos.join(" ");
+  });
+}
 
 // ============================================================
 // Viewport visível (somente mobile)
@@ -1337,10 +1467,16 @@ async function abrirConversa(conversaId) {
           allowRegenerate: podeRegenerar,
         });
       } else {
-        messageElement.textContent = msg.conteudo;
+        const mensagemSalva = separarContextoVisualSalvo(msg.conteudo);
+        messageElement.textContent = mensagemSalva.texto;
+        if (mensagemSalva.temImagem) adicionarIndicadorImagem(messageElement);
         chatArea.appendChild(messageElement);
-        chatMessages.push({ role, content: msg.conteudo });
-        historicoConversa.push({ role, content: msg.conteudo });
+        chatMessages.push({
+          role,
+          content: mensagemSalva.texto,
+          temImagem: mensagemSalva.temImagem,
+        });
+        historicoConversa.push({ role, content: mensagemSalva.texto });
       }
     });
 
@@ -1457,6 +1593,7 @@ function carregarConversaAtual() {
             messageElement.innerHTML = formatarRespostaIA(item.content, item.fontes);
           } else {
             messageElement.textContent = item.content;
+            if (item.temImagem) adicionarIndicadorImagem(messageElement);
           }
 
           chatArea.appendChild(messageElement);
@@ -1837,11 +1974,21 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
   const regenerando = opcoes.regenerar === true;
   if (requisicaoChatAtiva) return;
 
-  const userMessage = (
+  let userMessage = (
     typeof mensagemOverride === "string" ? mensagemOverride : input.value
   ).trim();
   const transformacao = opcoes.transformacao || "";
-  if (userMessage === "") return;
+  const imagensParaEnvio = imagensAnexadas.slice();
+  if (!userMessage && imagensParaEnvio.length) {
+    userMessage = imagensParaEnvio.length > 1
+      ? "Analise estas imagens."
+      : "Analise esta imagem.";
+  }
+  if (userMessage === "" && !imagensParaEnvio.length) return;
+  if (imagensParaEnvio.length && (regenerando || transformacao)) {
+    if (imageStatus) imageStatus.textContent = "Remova as imagens para usar esta ação.";
+    return;
+  }
 
   if (!regenerando && userMessage === SECRET_CLEAR_CODE) {
     limparChatSalvo();
@@ -1870,6 +2017,10 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
     const messageElement = document.createElement("div");
     messageElement.classList.add("message", "user");
     messageElement.textContent = userMessage;
+    adicionarMiniaturasImagem(
+      messageElement,
+      imagensParaEnvio.map((anexo) => anexo.dataUrl),
+    );
     chatArea.appendChild(messageElement);
     chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
 
@@ -1893,7 +2044,11 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
       resetarAlturaTextarea();
     }
 
-    chatMessages.push({ role: "user", content: userMessage });
+    chatMessages.push({
+      role: "user",
+      content: userMessage,
+      temImagem: false,
+    });
     salvarConversaAtual();
   }
 
@@ -1944,6 +2099,7 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
         regenerar: regenerando,
         acao_resposta: transformacao || null,
         resposta_alvo: transformacao ? (opcoes.respostaAlvo || "") : null,
+        imagens: imagensParaEnvio.map((anexo) => anexo.dataUrl),
       }),
     });
 
@@ -1994,6 +2150,15 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
 
     if (data.resultado) {
       const textoIA = data.resultado;
+      if (imagensParaEnvio.length) {
+        const ultimaMensagemUsuario = chatMessages.at(-1);
+        if (ultimaMensagemUsuario?.role === "user") {
+          ultimaMensagemUsuario.temImagem = true;
+        }
+        const idsEnviados = new Set(imagensParaEnvio.map((anexo) => anexo.id));
+        imagensAnexadas = imagensAnexadas.filter((anexo) => !idsEnviados.has(anexo.id));
+        renderizarPreviaImagens();
+      }
 
       if (data.conversa_id) {
         conversaAtualId = data.conversa_id;
