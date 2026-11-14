@@ -1661,3 +1661,174 @@
     padding: 12px 12px 10px;
   }
 }
+
+
+
+/* Ações compactas abaixo das respostas da IA */
+.sfai-message-actions,
+.sfai-generating-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  width: fit-content;
+  max-width: 100%;
+  margin: -10px 0 18px;
+  color: var(--text-secondary, #8b95a5);
+}
+
+.sfai-message-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: .78rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+
+.sfai-message-action:hover,
+.sfai-message-action:focus-visible {
+  color: var(--text, inherit);
+  background: var(--surface-soft, rgba(128,128,128,.09));
+  border-color: var(--border-color, var(--border, rgba(128,128,128,.18)));
+  outline: none;
+}
+
+.sfai-message-action:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.sfai-message-action.is-selected {
+  color: var(--accent, var(--primary, #38a6d8));
+  background: var(--surface-soft, rgba(56,166,216,.10));
+}
+
+.sfai-message-action svg {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.sfai-message-more {
+  position: relative;
+  display: inline-flex;
+}
+
+.sfai-message-more > summary {
+  list-style: none;
+}
+
+.sfai-message-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sfai-message-more[open] {
+  z-index: 30;
+}
+
+.sfai-message-menu {
+  position: absolute;
+  z-index: 100;
+  left: 0;
+  bottom: calc(100% + 7px);
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(280px, calc(100vw - 32px));
+  padding: 6px;
+  border: 1px solid var(--border-color, var(--border, rgba(128,128,128,.22)));
+  border-radius: 11px;
+  background: var(--surface, #171b24);
+  color: var(--text, #f3f4f6);
+  box-shadow: 0 12px 30px rgba(0,0,0,.22);
+}
+
+.sfai-message-more[open] .sfai-message-menu {
+  display: flex;
+}
+
+.sfai-message-menu-item {
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: .82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sfai-message-menu-item:hover,
+.sfai-message-menu-item:focus-visible {
+  background: var(--surface-soft, rgba(128,128,128,.12));
+  outline: none;
+}
+
+.sfai-stop-generation {
+  color: var(--danger, #dc6464);
+}
+
+.sfai-stop-generation:hover {
+  color: var(--danger, #dc6464);
+  background: var(--danger-soft, rgba(220,100,100,.1));
+}
+
+.message.chat-interrupted {
+  color: var(--text-secondary, #8b95a5);
+  font-size: .92rem;
+}
+
+.sfai-chart-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-color, var(--border, rgba(128,128,128,.22)));
+  border-radius: 8px;
+  background: var(--surface-soft, rgba(128,128,128,.07));
+  color: var(--text, inherit);
+  font: inherit;
+  font-size: .78rem;
+  cursor: pointer;
+}
+
+.sfai-chart-download:hover {
+  border-color: var(--accent, var(--primary, #38a6d8));
+}
+
+@media (max-width: 600px) {
+  .sfai-message-actions,
+  .sfai-generating-actions {
+    gap: 3px;
+    margin-top: -9px;
+  }
+
+  .sfai-message-action {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 7px;
+  }
+
+  .sfai-action-label {
+    display: none;
+  }
+
+  .sfai-message-menu {
+    left: auto;
+    right: 0;
+  }
+}

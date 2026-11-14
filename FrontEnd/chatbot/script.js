@@ -494,6 +494,25 @@ async function renderizarGraficos(elemento) {
         options: opcoes,
       });
       sfaiChartsAtivos.set(canvas, chart);
+
+      if (!card.querySelector(".sfai-chart-download")) {
+        const baixarGrafico = document.createElement("button");
+        baixarGrafico.type = "button";
+        baixarGrafico.className = "sfai-chart-download";
+        baixarGrafico.textContent = "Baixar gráfico";
+        baixarGrafico.title = "Baixar gráfico como imagem PNG";
+        baixarGrafico.addEventListener("click", () => {
+          try {
+            const link = document.createElement("a");
+            link.href = canvas.toDataURL("image/png");
+            link.download = "grafico-sfai.png";
+            link.click();
+          } catch (erro) {
+            console.error("Não foi possível exportar o gráfico:", erro);
+          }
+        });
+        card.appendChild(baixarGrafico);
+      }
     });
   } catch (erro) {
     console.error("Erro ao renderizar gráfico:", erro);
@@ -1131,6 +1150,7 @@ let primeiravez = true;
 
 let historicoConversa = [];
 let chatMessages = [];
+let requisicaoChatAtiva = null;
 
 const API_BASE_URL = "https://davidumbproxmax-classificador-mostratec.hf.space";
 let conversaAtualId = null;
@@ -1293,7 +1313,7 @@ async function abrirConversa(conversaId) {
 
     if (!Array.isArray(mensagens)) return;
 
-    mensagens.forEach((msg) => {
+    mensagens.forEach((msg, indiceMensagem) => {
       const role = msg.remetente === "assistant" ? "assistant" : "user";
       const messageElement = document.createElement("div");
       messageElement.classList.add("message", role === "assistant" ? "bot" : "user");
@@ -1308,6 +1328,14 @@ async function abrirConversa(conversaId) {
 
         chatArea.appendChild(messageElement);
         void renderizarMatematica(messageElement);
+        const ultimaMensagem = indiceMensagem === mensagens.length - 1;
+        const perguntaAnterior = mensagens[indiceMensagem - 1];
+        const podeRegenerar = ultimaMensagem && Boolean(conversaAtualId) &&
+          perguntaAnterior?.remetente === "user" &&
+          !String(perguntaAnterior.conteudo || "").startsWith("Classificar resumo:");
+        adicionarAcoesMensagem(messageElement, conteudo, msg.fontes || [], {
+          allowRegenerate: podeRegenerar,
+        });
       } else {
         messageElement.textContent = msg.conteudo;
         chatArea.appendChild(messageElement);
@@ -1418,7 +1446,7 @@ function carregarConversaAtual() {
       const mensagens = JSON.parse(dadosChat);
       if (Array.isArray(mensagens) && mensagens.length > 0) {
         chatMessages = mensagens;
-        mensagens.forEach((item) => {
+        mensagens.forEach((item, indiceMensagem) => {
           const messageElement = document.createElement("div");
           messageElement.classList.add(
             "message",
@@ -1434,6 +1462,11 @@ function carregarConversaAtual() {
           chatArea.appendChild(messageElement);
           if (item.role === "assistant") {
             void renderizarMatematica(messageElement);
+            const ultimaMensagem = indiceMensagem === mensagens.length - 1;
+            const temPerguntaAnterior = mensagens[indiceMensagem - 1]?.role === "user";
+            adicionarAcoesMensagem(messageElement, item.content, item.fontes || [], {
+              allowRegenerate: ultimaMensagem && temPerguntaAnterior && Boolean(conversaAtualId),
+            });
           }
         });
         chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
@@ -1527,11 +1560,253 @@ window.addEventListener("click", (event) => {
   }
 });
 
-async function enviarMensagem() {
-  const userMessage = input.value.trim();
+const ICONES_ACOES_MENSAGEM = {
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path>',
+  regenerate: '<path d="M20 7v5h-5"></path><path d="M20 12a8 8 0 1 1-2.34-5.66L20 7"></path>',
+  like: '<path d="M7 10v12"></path><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.5a2 2 0 0 0 1.8-1.1l2.1-4.2A1.8 1.8 0 0 1 15 5.88Z"></path>',
+  dislike: '<path d="M17 14V2"></path><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.5a2 2 0 0 0-1.8 1.1l-2.1 4.2A1.8 1.8 0 0 1 9 18.12Z"></path>',
+  more: '<circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>',
+  stop: '<rect x="6" y="6" width="12" height="12" rx="2"></rect>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"></path>',
+};
+
+function criarBotaoAcaoMensagem(acao, rotulo, icone) {
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "sfai-message-action";
+  botao.dataset.action = acao;
+  botao.title = rotulo;
+  botao.setAttribute("aria-label", rotulo);
+  botao.innerHTML =
+    '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    (ICONES_ACOES_MENSAGEM[icone] || "") +
+    '</svg><span class="sfai-action-label">' + rotulo + "</span>";
+  return botao;
+}
+
+function chaveFeedbackMensagem(texto) {
+  let hash = 2166136261;
+  const conteudo = String(texto || "");
+  for (let i = 0; i < conteudo.length; i += 1) {
+    hash ^= conteudo.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return "sfai_feedback:" + (conversaAtualId || "local") + ":" + (hash >>> 0).toString(36);
+}
+
+function adicionarAcoesGeracao(elemento, controller) {
+  const barra = document.createElement("div");
+  barra.className = "sfai-generating-actions";
+  const parar = criarBotaoAcaoMensagem("stop", "Parar geração", "stop");
+  parar.classList.add("sfai-stop-generation");
+  parar.addEventListener("click", () => {
+    parar.disabled = true;
+    parar.querySelector(".sfai-action-label").textContent = "Parando...";
+    controller.abort();
+  });
+  barra.appendChild(parar);
+  elemento.insertAdjacentElement("afterend", barra);
+  return barra;
+}
+
+function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
+  if (!elemento || elemento.classList.contains("chat-error")) return null;
+  const proximo = elemento.nextElementSibling;
+  if (proximo?.classList.contains("sfai-message-actions")) {
+    proximo.remove();
+  }
+
+  const barra = document.createElement("div");
+  barra.className = "sfai-message-actions";
+
+  const copiar = criarBotaoAcaoMensagem("copy", "Copiar", "copy");
+  const feedbackPositivo = criarBotaoAcaoMensagem("feedback-positive", "Útil", "like");
+  const feedbackNegativo = criarBotaoAcaoMensagem("feedback-negative", "Não útil", "dislike");
+  barra.append(copiar, feedbackPositivo, feedbackNegativo);
+
+  if (opcoes.allowRegenerate) {
+    barra.appendChild(
+      criarBotaoAcaoMensagem("regenerate", "Regenerar", "regenerate"),
+    );
+  }
+
+  const mais = document.createElement("details");
+  mais.className = "sfai-message-more";
+  const resumoMais = document.createElement("summary");
+  resumoMais.className = "sfai-message-action sfai-message-more-toggle";
+  resumoMais.title = "Mais opções";
+  resumoMais.setAttribute("aria-label", "Mais opções");
+  resumoMais.innerHTML =
+    '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    ICONES_ACOES_MENSAGEM.more +
+    '</svg><span class="sfai-action-label">Mais</span>';
+
+  const menu = document.createElement("div");
+  menu.className = "sfai-message-menu";
+  const opcoesMenu = [
+    ["simplify", "Explicar de forma mais simples"],
+    ["summarize", "Criar um resumo"],
+    ["expand", "Aprofundar a resposta"],
+    ["bullets", "Transformar em tópicos"],
+    ["export", "Exportar resposta"],
+  ];
+  if (elemento.querySelector(".rag-fontes-dropdown")) {
+    opcoesMenu.push(["sources", "Abrir fontes consultadas"]);
+  }
+  if (elemento.querySelector("pre code")) {
+    opcoesMenu.push(["copy-code", "Copiar código"]);
+  }
+
+  opcoesMenu.forEach(([acao, rotulo]) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "sfai-message-menu-item";
+    item.dataset.action = acao;
+    item.textContent = rotulo;
+    menu.appendChild(item);
+  });
+
+  mais.append(resumoMais, menu);
+  barra.appendChild(mais);
+
+  const chaveFeedback = chaveFeedbackMensagem(texto);
+  let feedbackAtual = "";
+  try {
+    feedbackAtual = localStorage.getItem(chaveFeedback) || "";
+  } catch (erro) {
+    console.warn("Não foi possível ler a avaliação local da resposta.", erro);
+  }
+
+  const atualizarBotoesFeedback = () => {
+    feedbackPositivo.classList.toggle("is-selected", feedbackAtual === "positive");
+    feedbackNegativo.classList.toggle("is-selected", feedbackAtual === "negative");
+    feedbackPositivo.setAttribute("aria-pressed", String(feedbackAtual === "positive"));
+    feedbackNegativo.setAttribute("aria-pressed", String(feedbackAtual === "negative"));
+  };
+  atualizarBotoesFeedback();
+
+  barra.addEventListener("click", async (evento) => {
+    const botao = evento.target.closest("button[data-action]");
+    if (!botao || botao.disabled) return;
+
+    const acao = botao.dataset.action;
+    if (acao === "copy") {
+      try {
+        await navigator.clipboard.writeText(String(texto || ""));
+        botao.classList.add("is-selected");
+        botao.title = "Copiado";
+        botao.setAttribute("aria-label", "Copiado");
+      } catch (erro) {
+        console.error("Falha ao copiar resposta:", erro);
+        botao.title = "Não foi possível copiar";
+      }
+      return;
+    }
+
+    if (acao === "feedback-positive" || acao === "feedback-negative") {
+      const novoFeedback = acao === "feedback-positive" ? "positive" : "negative";
+      feedbackAtual = feedbackAtual === novoFeedback ? "" : novoFeedback;
+      try {
+        if (feedbackAtual) {
+          localStorage.setItem(chaveFeedback, feedbackAtual);
+        } else {
+          localStorage.removeItem(chaveFeedback);
+        }
+      } catch (erro) {
+        console.warn("Não foi possível salvar a avaliação local.", erro);
+      }
+      atualizarBotoesFeedback();
+      return;
+    }
+
+    if (acao === "regenerate") {
+      const perguntaAnterior = elemento.previousElementSibling;
+      if (!perguntaAnterior?.classList.contains("user")) return;
+
+      const pergunta = perguntaAnterior.textContent.trim();
+      const novaMensagem = document.createElement("div");
+      novaMensagem.className = "message bot";
+      novaMensagem.innerHTML =
+        '<span class="typing-indicator" aria-label="Gerando novamente"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>';
+      barra.insertAdjacentElement("afterend", novaMensagem);
+      mais.open = false;
+
+      void enviarMensagem(pergunta, {
+        regenerar: true,
+        aiElement: novaMensagem,
+        substituirElemento: elemento,
+        toolbarAnterior: barra,
+      });
+      return;
+    }
+
+    if (acao === "export") {
+      const arquivo = new Blob([String(texto || "")], {
+        type: "text/markdown;charset=utf-8",
+      });
+      const url = URL.createObjectURL(arquivo);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "resposta-sfai.md";
+      link.click();
+      URL.revokeObjectURL(url);
+      mais.open = false;
+      return;
+    }
+
+    if (acao === "sources") {
+      const fontesEl = elemento.querySelector(".rag-fontes-dropdown");
+      if (fontesEl) {
+        fontesEl.open = true;
+        fontesEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      mais.open = false;
+      return;
+    }
+
+    if (acao === "copy-code") {
+      const blocos = Array.from(elemento.querySelectorAll("pre code"));
+      const codigo = blocos.map((bloco) => bloco.textContent || "").join("\n\n");
+      if (codigo) {
+        try {
+          await navigator.clipboard.writeText(codigo);
+          botao.textContent = "Código copiado";
+        } catch (erro) {
+          console.error("Falha ao copiar código:", erro);
+        }
+      }
+      mais.open = false;
+      return;
+    }
+
+    const comandos = {
+      simplify: "Explique a resposta anterior de forma mais simples, usando linguagem clara e exemplos quando ajudarem.",
+      summarize: "Faça um resumo da resposta anterior, preservando as informações mais importantes.",
+      expand: "Aprofunde a resposta anterior com mais detalhes, contexto e explicações relevantes.",
+      bullets: "Reorganize a resposta anterior em tópicos curtos e bem organizados, sem perder informações importantes.",
+    };
+
+    if (comandos[acao]) {
+      mais.open = false;
+      void enviarMensagem(comandos[acao]);
+    }
+  });
+
+  elemento.insertAdjacentElement("afterend", barra);
+  return barra;
+}
+
+async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
+  const regenerando = opcoes.regenerar === true;
+  if (requisicaoChatAtiva) return;
+
+  const userMessage = (
+    typeof mensagemOverride === "string" ? mensagemOverride : input.value
+  ).trim();
   if (userMessage === "") return;
 
-  if (userMessage === SECRET_CLEAR_CODE) {
+  if (!regenerando && userMessage === SECRET_CLEAR_CODE) {
     limparChatSalvo();
     chatArea.innerHTML = "";
     primeiravez = true;
@@ -1546,40 +1821,60 @@ async function enviarMensagem() {
     return;
   }
 
-  const messageElement = document.createElement("div");
-  messageElement.classList.add("message", "user");
-  messageElement.textContent = userMessage;
-  chatArea.appendChild(messageElement);
-  chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
+  if (!regenerando) {
+    document
+      .querySelectorAll('.sfai-message-action[data-action="regenerate"]')
+      .forEach((botao) => {
+        botao.disabled = true;
+        botao.title = "Só é possível regenerar a resposta mais recente";
+        botao.setAttribute("aria-label", botao.title);
+      });
 
-  if (primeiravez === true) {
-    const chatAra = document.getElementById("hero");
+    const messageElement = document.createElement("div");
+    messageElement.classList.add("message", "user");
+    messageElement.textContent = userMessage;
+    chatArea.appendChild(messageElement);
+    chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
 
-    if (chatAra) chatAra.classList.add("fade-out1");
+    if (primeiravez === true) {
+      const chatAra = document.getElementById("hero");
+      if (chatAra) chatAra.classList.add("fade-out1");
 
-    setTimeout(() => {
-      if (chatAra) chatAra.style.display = "none";
-      if (window.matchMedia("(max-width: 768px)").matches) {
-        const footer = document.querySelector("footer");
-        if (footer) footer.style.display = "none";
-      }
-    }, 500);
-    primeiravez = false;
-    if (chatContainer) chatContainer.classList.add("expanded");
+      setTimeout(() => {
+        if (chatAra) chatAra.style.display = "none";
+        if (window.matchMedia("(max-width: 768px)").matches) {
+          const footer = document.querySelector("footer");
+          if (footer) footer.style.display = "none";
+        }
+      }, 500);
+      primeiravez = false;
+      if (chatContainer) chatContainer.classList.add("expanded");
+    }
+
+    if (typeof mensagemOverride !== "string") {
+      input.value = "";
+      resetarAlturaTextarea();
+    }
+
+    chatMessages.push({ role: "user", content: userMessage });
+    salvarConversaAtual();
   }
 
-  input.value = "";
-  resetarAlturaTextarea();
-
-  const aiElement = document.createElement("div");
+  const aiElement = opcoes.aiElement || document.createElement("div");
   aiElement.classList.add("message", "bot");
-  aiElement.innerHTML = `<span class="typing-indicator" aria-label="Pensando"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>`;
-  chatArea.appendChild(aiElement);
+  if (!opcoes.aiElement) {
+    aiElement.innerHTML =
+      '<span class="typing-indicator" aria-label="Pensando"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>';
+    chatArea.appendChild(aiElement);
+  }
 
-  chatMessages.push({ role: "user", content: userMessage });
-  salvarConversaAtual();
+  const controller = new AbortController();
+  requisicaoChatAtiva = controller;
+  const barraGeracao = adicionarAcoesGeracao(aiElement, controller);
 
-  const modo = feiraSelecionada ? "classificacao" : "conversa";
+  const modo = regenerando
+    ? "conversa"
+    : (feiraSelecionada ? "classificacao" : "conversa");
 
   let feiraMapeada = "";
   if (
@@ -1595,26 +1890,29 @@ async function enviarMensagem() {
   try {
     const user = getUserData();
     const usuarioId = user?.id || null;
-
-    const url = `${API_BASE_URL}/classificar`;
+    const url = API_BASE_URL + "/classificar";
 
     const response = await fetch(url, {
       method: "POST",
       headers: cabecalhosAutenticados(),
+      signal: controller.signal,
       body: JSON.stringify({
         usuario_id: usuarioId,
         conversa_id: conversaAtualId,
         resumo: userMessage,
-        feira: feiraMapeada,
+        feira: regenerando ? "" : feiraMapeada,
         modo: modo,
         mensagem: userMessage,
         stream: modo === "conversa",
+        regenerar: regenerando,
       }),
     });
 
     if (response.status === 401) {
+      barraGeracao.remove();
       aiElement.classList.add("chat-error");
-      aiElement.innerHTML = `<span class="chat-error-msg">Sua sessão expirou. Redirecionando para o login...</span>`;
+      aiElement.innerHTML =
+        '<span class="chat-error-msg">Sua sessão expirou. Redirecionando para o login...</span>';
       setTimeout(encerrarSessaoInvalida, 1500);
       return;
     }
@@ -1635,23 +1933,28 @@ async function enviarMensagem() {
     }
 
     if (!response.ok) {
+      barraGeracao.remove();
       const detalhe = data?.detail;
       const mensagemErro = typeof detalhe === "string"
         ? detalhe
         : (detalhe?.message || "Não foi possível concluir a solicitação à IA.");
 
-      aiElement.classList.add("chat-error");
-      const erroSpan = document.createElement("span");
-      erroSpan.className = "chat-error-msg";
-      erroSpan.textContent = mensagemErro;
-      aiElement.replaceChildren(erroSpan);
+      if (regenerando) {
+        aiElement.remove();
+      } else {
+        aiElement.classList.add("chat-error");
+        const erroSpan = document.createElement("span");
+        erroSpan.className = "chat-error-msg";
+        erroSpan.textContent = mensagemErro;
+        aiElement.replaceChildren(erroSpan);
+      }
 
       console.error("Erro retornado pelo backend:", response.status, data);
       return;
     }
 
     if (data.resultado) {
-      let textoIA = data.resultado;
+      const textoIA = data.resultado;
 
       if (data.conversa_id) {
         conversaAtualId = data.conversa_id;
@@ -1671,15 +1974,18 @@ async function enviarMensagem() {
       }
 
       if (modo === "conversa") {
-        historicoConversa.push({
-          role: "user",
-          content: userMessage,
-        });
+        if (regenerando) {
+          if (historicoConversa.at(-1)?.role === "assistant") {
+            historicoConversa.pop();
+          }
+          if (chatMessages.at(-1)?.role === "assistant") {
+            chatMessages.pop();
+          }
+        } else {
+          historicoConversa.push({ role: "user", content: userMessage });
+        }
 
-        historicoConversa.push({
-          role: "assistant",
-          content: textoIA,
-        });
+        historicoConversa.push({ role: "assistant", content: textoIA });
       }
 
       const fontesResposta = Array.isArray(data.fontes)
@@ -1700,9 +2006,9 @@ async function enviarMensagem() {
         historicoConversa = historicoConversa.slice(-10);
       }
 
+      barraGeracao.remove();
       const textoFormatado = formatarRespostaIA(textoIA, fontesResposta);
 
-      chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
       if (respostaEmStreaming) {
         aiElement.innerHTML = textoFormatado;
         await renderizarMatematica(aiElement);
@@ -1710,22 +2016,60 @@ async function enviarMensagem() {
         await digitarTexto(aiElement, textoFormatado, 6);
       }
 
+      if (regenerando) {
+        opcoes.substituirElemento?.remove();
+        opcoes.toolbarAnterior?.remove();
+      }
+
+      if (modo === "conversa") {
+        adicionarAcoesMensagem(aiElement, textoIA, fontesResposta, {
+          allowRegenerate: true,
+        });
+      } else {
+        adicionarAcoesMensagem(aiElement, textoIA, fontesResposta, {
+          allowRegenerate: false,
+        });
+      }
+
+      chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
       salvarConversaAtual();
     } else {
+      barraGeracao.remove();
       aiElement.classList.add("chat-error");
-      aiElement.innerHTML = `<span class="chat-error-msg">Erro na resposta do backend da IA.</span>`;
+      aiElement.innerHTML = '<span class="chat-error-msg">Erro na resposta do backend da IA.</span>';
       console.error("Erro detalhado:", data);
     }
   } catch (erro) {
-    aiElement.classList.add("chat-error");
-    const mensagemErro = erro?.sfaIUserMessage
-      ? erro.message
-      : "Erro de conexão com o servidor de IA. Verifique sua internet e tente novamente.";
-    const erroSpan = document.createElement("span");
-    erroSpan.className = "chat-error-msg";
-    erroSpan.textContent = mensagemErro;
-    aiElement.replaceChildren(erroSpan);
+    barraGeracao.remove();
+    if (erro?.name === "AbortError") {
+      if (regenerando) {
+        aiElement.remove();
+      } else {
+        const parcial = aiElement.textContent.trim();
+        aiElement.classList.add("chat-interrupted");
+        aiElement.textContent = parcial
+          ? parcial + "\n\nGeração interrompida."
+          : "Geração interrompida.";
+      }
+    } else {
+      if (regenerando) {
+        aiElement.remove();
+      } else {
+        aiElement.classList.add("chat-error");
+        const mensagemErro = erro?.sfaIUserMessage
+          ? erro.message
+          : "Erro de conexão com o servidor de IA. Verifique sua internet e tente novamente.";
+        const erroSpan = document.createElement("span");
+        erroSpan.className = "chat-error-msg";
+        erroSpan.textContent = mensagemErro;
+        aiElement.replaceChildren(erroSpan);
+      }
+    }
     console.error("Erro no Fetch:", erro);
+  } finally {
+    if (requisicaoChatAtiva === controller) {
+      requisicaoChatAtiva = null;
+    }
   }
 }
 
