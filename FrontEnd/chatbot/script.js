@@ -1734,7 +1734,8 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
       novaMensagem.className = "message bot";
       novaMensagem.innerHTML =
         '<span class="typing-indicator" aria-label="Gerando novamente"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>';
-      barra.insertAdjacentElement("afterend", novaMensagem);
+      const rodapeAtual = barra.closest(".sfai-message-footer");
+      (rodapeAtual || barra).insertAdjacentElement("afterend", novaMensagem);
       mais.open = false;
 
       void enviarMensagem(pergunta, {
