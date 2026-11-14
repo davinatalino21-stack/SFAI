@@ -740,6 +740,32 @@ function converterCitacoesEmLinks(texto, fontes) {
     );
   }
 
+  // Citações geradas a partir dos resultados da Tavily: [web:1], [web:2]...
+  // A numeração corresponde à ordem das fontes retornadas pelo backend.
+  texto = texto.replace(/\[web:(\d+)\]/gi, (match, numero) => {
+    const fonte = fontesWeb[Number(numero) - 1];
+    if (!fonte) return "[Fonte web " + numero + " indisponível]";
+
+    let url = "";
+    try {
+      const destino = new URL(String(fonte.url || ""));
+      if (destino.protocol === "https:" || destino.protocol === "http:") {
+        url = destino.href;
+      }
+    } catch (_) {
+      url = "";
+    }
+
+    if (!url) return "[Fonte web " + numero + " indisponível]";
+
+    const nomeFonte = String(fonte.titulo || "Fonte consultada");
+    return '<a class="rag-citacao-link rag-citacao-web" href="' +
+      escaparHtml(url) + '" target="_blank" rel="noopener noreferrer" title="' +
+      escaparHtml(nomeFonte) + '" aria-label="' +
+      escaparHtml("Fonte " + numero + ": " + nomeFonte) +
+      '">[' + numero + ']</a>';
+  });
+
   // Citações nativas do Browser Search da Groq:
   // 【3†L5-L7】, 〖3†L5-L7〗 e [3†L5-L7].
   // O índice aponta para a fonte web na ordem recebida do backend.
