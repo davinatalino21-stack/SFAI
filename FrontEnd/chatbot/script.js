@@ -332,6 +332,157 @@ function escaparHtml(texto) {
 }
 
 // ============================================================
+// Gráficos do SFAI (Chart.js)
+// A IA envia um bloco sfai-chart com JSON validado no frontend.
+// A biblioteca só é carregada quando a resposta contém um gráfico.
+// ============================================================
+let sfaiChartJsPromise = null;
+const sfaiChartsAtivos = new WeakMap();
+
+function extrairBlocosGraficos(texto) {
+  const graficos = [];
+  const padraoGrafico = new RegExp("\\x60{3}sfai-chart\\s*([\\s\\S]*?)\\x60{3}", "gi");
+  const textoProtegido = String(texto ?? "").replace(
+    padraoGrafico,
+    (bloco, json) => {
+      const token = "SFAI_CHART_TOKEN_" + graficos.length + "_END";
+      try {
+        const config = JSON.parse(json.trim());
+        if (!config || typeof config !== "object" || Array.isArray(config)) {
+          throw new Error("Configuração de gráfico inválida.");
+        }
+        graficos.push({ token, config });
+        return "\n\n" + token + "\n\n";
+      } catch (erro) {
+        console.error("Bloco de gráfico inválido:", erro);
+        return "\n\nNão foi possível montar o gráfico: os dados recebidos são inválidos.\n\n";
+      }
+    },
+  );
+  return { texto: textoProtegido, graficos };
+}
+
+function carregarChartJs() {
+  if (window.Chart) return Promise.resolve(window.Chart);
+  if (sfaiChartJsPromise) return sfaiChartJsPromise;
+
+  const script = document.createElement("script");
+  script.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js";
+  script.async = true;
+  script.crossOrigin = "anonymous";
+
+  sfaiChartJsPromise = new Promise((resolve, reject) => {
+    script.onload = () => resolve(window.Chart);
+    script.onerror = () => {
+      sfaiChartJsPromise = null;
+      reject(new Error("Não foi possível carregar o Chart.js."));
+    };
+  });
+
+  document.head.appendChild(script);
+  return sfaiChartJsPromise;
+}
+
+function validarConfigGrafico(config) {
+  const tipos = ["line", "bar", "pie", "doughnut", "scatter"];
+  if (!tipos.includes(config.type)) return false;
+  if (!Array.isArray(config.datasets) || config.datasets.length < 1 || config.datasets.length > 6) return false;
+
+  if (config.type === "scatter") {
+    return config.datasets.every((dataset) =>
+      Array.isArray(dataset.data) &&
+      dataset.data.length > 0 &&
+      dataset.data.length <= 40 &&
+      dataset.data.every((ponto) =>
+        ponto && Number.isFinite(Number(ponto.x)) && Number.isFinite(Number(ponto.y))
+      )
+    );
+  }
+
+  if (!Array.isArray(config.labels) || config.labels.length < 1 || config.labels.length > 40) return false;
+  return config.datasets.every((dataset) =>
+    typeof dataset.label === "string" &&
+    Array.isArray(dataset.data) &&
+    dataset.data.length === config.labels.length &&
+    dataset.data.every((valor) => Number.isFinite(Number(valor)))
+  );
+}
+
+function montarHtmlGrafico(config) {
+  const dados = escaparHtml(JSON.stringify(config));
+  const titulo = escaparHtml(config.title || "Gráfico");
+  return '<section class="sfai-chart-card">' +
+    '<div class="sfai-chart-title">' + titulo + '</div>' +
+    '<div class="sfai-chart-canvas-wrap"><canvas class="sfai-chart-canvas" role="img" aria-label="' + titulo + '"></canvas></div>' +
+    '<div class="sfai-chart-data" hidden>' + dados + '</div>' +
+    '</section>';
+}
+
+async function renderizarGraficos(elemento) {
+  if (!elemento?.querySelector?.(".sfai-chart-canvas")) return;
+
+  try {
+    const ChartConstructor = await carregarChartJs();
+    const cards = elemento.querySelectorAll(".sfai-chart-card");
+    cards.forEach((card) => {
+      const canvas = card.querySelector(".sfai-chart-canvas");
+      const dadosEl = card.querySelector(".sfai-chart-data");
+      if (!canvas || !dadosEl || sfaiChartsAtivos.has(canvas)) return;
+
+      const config = JSON.parse(dadosEl.textContent);
+      if (!validarConfigGrafico(config)) {
+        card.insertAdjacentText("beforeend", "Os dados deste gráfico não passaram pela validação.");
+        return;
+      }
+
+      const tipo = config.type;
+      const opcoes = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 350 },
+        plugins: {
+          legend: { display: true, position: "bottom" },
+          title: { display: false },
+        },
+      };
+
+      if (tipo === "line" || tipo === "bar") {
+        opcoes.scales = {
+          x: { ticks: { color: "#9ca3af" }, grid: { color: "rgba(128,128,128,.14)" } },
+          y: { beginAtZero: tipo === "bar", ticks: { color: "#9ca3af" }, grid: { color: "rgba(128,128,128,.14)" } },
+        };
+      }
+
+      const chart = new ChartConstructor(canvas, {
+        type: tipo,
+        data: {
+          labels: config.labels,
+          datasets: config.datasets.map((dataset) => ({
+            label: dataset.label || "Dados",
+            data: dataset.data,
+            tension: 0.25,
+            fill: false,
+            borderWidth: 2,
+          })),
+        },
+        options: opcoes,
+      });
+      sfaiChartsAtivos.set(canvas, chart);
+    });
+  } catch (erro) {
+    console.error("Erro ao renderizar gráfico:", erro);
+    elemento.querySelectorAll(".sfai-chart-card").forEach((card) => {
+      if (!card.querySelector(".sfai-chart-error")) {
+        const aviso = document.createElement("p");
+        aviso.className = "sfai-chart-error";
+        aviso.textContent = "Não foi possível carregar o gráfico. Verifique sua conexão e recarregue a conversa.";
+        card.appendChild(aviso);
+      }
+    });
+  }
+}
+
+// ============================================================
 // Renderização de fórmulas matemáticas (MathJax 3)
 // A biblioteca é carregada sob demanda, apenas quando há fórmulas.
 // ============================================================
@@ -378,22 +529,20 @@ function carregarMathJax() {
 }
 
 async function renderizarMatematica(elemento) {
-  if (
-    !elemento ||
-    !elemento.querySelector?.(".ans-math-block, .ans-math-inline")
-  ) {
-    return;
+  if (!elemento) return;
+
+  if (elemento.querySelector?.(".ans-math-block, .ans-math-inline")) {
+    try {
+      const mathJax = await carregarMathJax();
+      if (mathJax?.typesetPromise) {
+        await mathJax.typesetPromise([elemento]);
+      }
+    } catch (erro) {
+      console.error("Erro ao renderizar fórmulas matemáticas:", erro);
+    }
   }
 
-  try {
-    const mathJax = await carregarMathJax();
-    if (mathJax?.typesetPromise) {
-      await mathJax.typesetPromise([elemento]);
-    }
-  } catch (erro) {
-    // O texto da resposta continua disponível se a CDN falhar.
-    console.error("Erro ao renderizar fórmulas matemáticas:", erro);
-  }
+  await renderizarGraficos(elemento);
 }
 
 // Extrai fórmulas antes do Markdown para não separar delimitadores,
@@ -517,6 +666,29 @@ function instalarEstilosFontesRag() {
     mjx-container[display="true"] {
       margin: .8em 0 !important;
     }
+    .sfai-chart-card {
+      width: min(100%, 760px);
+      margin: 14px 0 20px;
+      padding: 14px;
+      border: 1px solid var(--border-color, rgba(128,128,128,.25));
+      border-radius: 14px;
+      background: var(--surface-soft, rgba(128,128,128,.06));
+      box-sizing: border-box;
+    }
+    .sfai-chart-title {
+      margin-bottom: 10px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+    .sfai-chart-canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: 300px;
+    }
+    .sfai-chart-error {
+      color: var(--text-secondary, #9ca3af);
+      font-size: .9em;
+    }
     @media (max-width: 600px) {
       .rag-fontes { font-size: .88em; }
       .ans-heading { margin: 8px 0 4px; }
@@ -635,8 +807,13 @@ function formatarRespostaIA(texto, fontes) {
 
   instalarEstilosFontesRag();
 
-  // Protege expressões matemáticas antes das substituições de Markdown.
-  const protegido = protegerEquacoesMatematicas(String(texto));
+  // Retira blocos de gráfico antes do Markdown e das expressões matemáticas.
+  const graficosProtegidos = extrairBlocosGraficos(String(texto));
+  const graficosPorToken = new Map(
+    graficosProtegidos.graficos.map((grafico) => [grafico.token, grafico.config]),
+  );
+
+  const protegido = protegerEquacoesMatematicas(graficosProtegidos.texto);
   const equacoesPorToken = new Map(
     protegido.equacoes.map((equacao) => [equacao.token, equacao]),
   );
@@ -665,6 +842,14 @@ function formatarRespostaIA(texto, fontes) {
           const equacaoSozinha = equacoesPorToken.get(linha);
           if (equacaoSozinha) {
             return montarHtmlEquacao(equacaoSozinha);
+          }
+
+          const grafico = graficosPorToken.get(linha);
+          if (grafico) {
+            if (!validarConfigGrafico(grafico)) {
+              return '<div class="ans-line">Não foi possível montar o gráfico: os dados recebidos são inválidos.</div>';
+            }
+            return montarHtmlGrafico(grafico);
           }
 
           const titulo = linha.match(/^(#{1,6})\s+(.+)$/);
