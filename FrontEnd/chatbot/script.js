@@ -811,7 +811,7 @@ function formatarListaFontes(fontes) {
     };
   }).filter(Boolean);
 
-  const sites = grupos.web.map((fonte) => {
+  const sitesTodos = grupos.web.map((fonte) => {
     let destino = "";
     let host = "";
     try {
@@ -831,10 +831,15 @@ function formatarListaFontes(fontes) {
       nome: String(fonte.titulo || host),
       detalhe: host,
       inicial: host.slice(0, 2).toUpperCase() || "WEB",
-      favicon: "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(host) + "&sz=64"
+      favicon: "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(host) + "&sz=64",
+      destaque: fonte.destaque !== false
     };
   }).filter(Boolean);
 
+  // Todas as fontes continuam disponíveis para resolver citações [n] da Groq.
+  // O painel visual mostra apenas as até 5 referências priorizadas pelo backend.
+  const sites = sitesTodos.filter((fonte) => fonte.destaque).slice(0, 5);
+  const totalFontes = documentos.length + sitesTodos.length;
   const todas = documentos.concat(sites);
   if (todas.length === 0) return "";
 
@@ -847,8 +852,8 @@ function formatarListaFontes(fontes) {
   };
 
   const icones = todas.slice(0, 3).map(montarIcone).join("");
-  const extras = todas.length > 3
-    ? '<span class="rag-fontes-mais" aria-hidden="true">+' + (todas.length - 3) + '</span>'
+  const extras = totalFontes > 3
+    ? '<span class="rag-fontes-mais" aria-hidden="true">+' + (totalFontes - 3) + '</span>'
     : "";
   const montarGrupo = (titulo, itens) => {
     if (itens.length === 0) return "";

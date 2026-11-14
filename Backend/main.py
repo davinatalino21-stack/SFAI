@@ -337,6 +337,16 @@ GROQ_MAX_CHAT_TOKENS = int(os.environ.get("GROQ_MAX_CHAT_TOKENS", "1400"))
 GROQ_MAX_CLASSIFICATION_TOKENS = int(
     os.environ.get("GROQ_MAX_CLASSIFICATION_TOKENS", "1000")
 )
+# Limites locais para impedir que conversas longas sejam reenviadas sem controle.
+GROQ_HISTORY_MAX_CHARS = int(os.environ.get("GROQ_HISTORY_MAX_CHARS", "5000"))
+GROQ_HISTORY_MAX_MESSAGE_CHARS = int(
+    os.environ.get("GROQ_HISTORY_MAX_MESSAGE_CHARS", "1500")
+)
+# Limite de referências destacadas no painel; a lista completa é preservada
+# para que os índices das citações nativas da Groq continuem corretos.
+GROQ_WEB_MAX_SOURCES = max(
+    1, min(int(os.environ.get("GROQ_WEB_MAX_SOURCES", "5")), 10)
+)
 
 MODELO_GROQ = "openai/gpt-oss-120b"
 MODELO_EMBEDDING = "gemini-embedding-001"
@@ -397,6 +407,14 @@ SYSTEM_PROMPT_CHAT_RAG = (
     "8. Não crie uma seção final manual de fontes ou links. O backend anexa os metadados "
     "reais dos documentos recuperados e dos sites visitados. Não diga que pesquisou "
     "na internet se a ferramenta não foi executada.\n\n"
+    "POLÍTICA DE PESQUISA COM CONTROLE DE CUSTO:\n"
+    "Quando Browser Search estiver disponível, faça uma busca objetiva e encerre a pesquisa assim que houver evidência suficiente. "
+    "Use no máximo 3 fontes independentes para sustentar a resposta e abra no máximo 2 páginas; não faça buscas exploratórias, "
+    "não repita consultas com pequenas variações e não abra páginas apenas para aumentar a quantidade de fontes. "
+    "Priorize páginas oficiais e atuais, especialmente editais, calendários e comunicados da própria organização. "
+    "Para prazos e cronogramas, descarte resultados que apontem claramente para edições antigas, blogs pessoais ou páginas sem relação direta. "
+    "Se duas fontes oficiais/confiáveis já confirmarem a informação, pare. Se não encontrar evidência suficiente dentro desse limite, "
+    "informe a limitação em vez de continuar navegando.\n\n"
     "CONCISÃO E FORMATO DAS RESPOSTAS:\n"
     "Seja direto e proporcional à pergunta. Para perguntas simples, responda em 1 a 4 "
     "frases. Em geral, use no máximo 120 palavras, salvo quando o usuário pedir "
@@ -515,15 +533,91 @@ def _obter_campo(objeto, nome: str, padrao=None):
     return getattr(objeto, nome, padrao)
 
 
-def registrar_ferramentas_executadas(resposta) -> tuple[list[dict], bool]:
-    """Extrai fontes web e informa se o browser foi realmente executado.
+def estimar_tokens_aproximados(texto: str) -> int:
+    """Estimativa simples para diagnóstico; não substitui a contagem da Groq."""
+    return (len(texto or "") + 3) // 4
 
-    A Groq expõe os resultados de Browser Search em ``search_results``. A
-    leitura de ``browser_results`` é mantida como compatibilidade com respostas
-    antigas/alternativas do SDK.
+
+def selecionar_fontes_web(
+    fontes_candidatas: list[dict],
+    consulta_usuario: str = "",
+    exigir_atualidade: bool = False,
+) -> list[dict]:
+    """Deduplica, penaliza fontes fracas/antigas e limita as referências retornadas."""
+    stopwords = {
+        "qual", "quais", "como", "onde", "quando", "para", "por", "com",
+        "uma", "umas", "uns", "que", "das", "dos", "da", "do", "de",
+        "e", "ou", "a", "o", "as", "os", "em", "no", "na", "nos", "nas",
+        "sobre", "atual", "atualmente",
+    }
+    termos = {
+        termo for termo in re.findall(r"[a-zà-ÿ0-9]{3,}", (consulta_usuario or "").lower())
+        if termo not in stopwords
+    }
+    ano_atual = datetime.now(ZoneInfo("America/Sao_Paulo")).year
+    vistos = set()
+    ranqueadas = []
+
+    for indice, fonte in enumerate(fontes_candidatas):
+        titulo = str(fonte.get("titulo") or "")
+        url = str(fonte.get("url") or "")
+        if not re.match(r"^https?://", url, flags=re.IGNORECASE):
+            continue
+
+        chave = re.sub(
+            r"([?&])(utm_[^=&]+|fbclid|gclid)=[^&]*",
+            "",
+            url,
+            flags=re.IGNORECASE,
+        )
+        chave = re.sub(r"[?&]$", "", chave).rstrip("/").lower()
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+
+        texto_busca = f"{titulo} {url}".lower()
+        anos = [
+            int(ano)
+            for ano in re.findall(r"(?<!\d)(?:19|20)\d{2}(?!\d)", texto_busca)
+        ]
+        if exigir_atualidade and anos and max(anos) < ano_atual:
+            print(f"[GROQ][WEB][DESCARTADA_ANTIGA] {titulo[:140]} | {url[:240]}")
+            continue
+
+        host_match = re.search(r"^https?://(?:www\.)?([^/:?#]+)", url, flags=re.IGNORECASE)
+        host = host_match.group(1).lower() if host_match else ""
+        score = sum(3 for termo in termos if termo in titulo.lower())
+        score += sum(1 for termo in termos if termo in url.lower())
+
+        # Sinais de domínio institucional; não substituem a checagem do conteúdo.
+        if host.endswith((".gov.br", ".edu.br", ".org.br", ".gov")):
+            score += 5
+        if re.search(r"(edital|cronograma|calend[aá]rio|inscri[cç][aã]o|datas)", titulo, re.IGNORECASE):
+            score += 2
+        if "blogspot.com" in host or "wordpress.com" in host:
+            score -= 5
+
+        ranqueadas.append((score, -indice, fonte))
+
+    ranqueadas.sort(reverse=True, key=lambda item: (item[0], item[1]))
+    return [item[2] for item in ranqueadas[:GROQ_WEB_MAX_SOURCES]]
+
+
+def registrar_ferramentas_executadas(
+    resposta,
+    consulta_usuario: str = "",
+    exigir_atualidade: bool = False,
+) -> tuple[list[dict], bool]:
+    """Extrai fontes na ordem original e marca até 5 referências para o painel.
+
+    A navegação interna da Browser Search acontece nos servidores da Groq.
+    O limite local controla a exibição das fontes, não o volume já processado
+    dentro do ciclo interno da ferramenta.
     """
+    fontes_candidatas = []
     fontes_web = []
     urls_vistas = set()
+    resultados_brutos = 0
     browser_executado = False
 
     try:
@@ -537,14 +631,14 @@ def registrar_ferramentas_executadas(resposta) -> tuple[list[dict], bool]:
                 "[GROQ][TOOLS] Campo executed_tools não foi retornado "
                 f"pelo SDK/resposta. finish_reason={motivo}"
             )
-            return fontes_web, browser_executado
+            return [], browser_executado
 
         if not ferramentas:
             print(
                 "[GROQ][TOOLS] Nenhuma ferramenta executada. "
                 f"finish_reason={motivo}"
             )
-            return fontes_web, browser_executado
+            return [], browser_executado
 
         print(f"[GROQ][TOOLS] {len(ferramentas)} ferramenta(s) executada(s):")
         for ferramenta in ferramentas:
@@ -560,16 +654,26 @@ def registrar_ferramentas_executadas(resposta) -> tuple[list[dict], bool]:
             )
             resultados = _obter_campo(dados_busca, "results", dados_busca) or []
             if not isinstance(resultados, list):
-                resultados = []
+                continue
+
             for resultado in resultados:
-                titulo = str(_obter_campo(resultado, "title", "") or "Página consultada").strip()
+                resultados_brutos += 1
+                titulo = str(
+                    _obter_campo(resultado, "title", "") or "Página consultada"
+                ).strip()
                 url = str(_obter_campo(resultado, "url", "") or "").strip()
 
                 # Nunca expor esquemas javascript:, data:, file: etc. como links.
                 if not re.match(r"^https?://", url, flags=re.IGNORECASE):
                     continue
 
-                chave = url.rstrip("/").lower()
+                chave = re.sub(
+                    r"([?&])(utm_[^=&]+|fbclid|gclid)=[^&]*",
+                    "",
+                    url,
+                    flags=re.IGNORECASE,
+                )
+                chave = re.sub(r"[?&]$", "", chave).rstrip("/").lower()
                 if chave in urls_vistas:
                     continue
                 urls_vistas.add(chave)
@@ -579,15 +683,47 @@ def registrar_ferramentas_executadas(resposta) -> tuple[list[dict], bool]:
                     "titulo": titulo[:300],
                     "url": url[:2000],
                 }
+                fontes_candidatas.append(fonte)
                 fontes_web.append(fonte)
-                print(f"[GROQ][BROWSER] {titulo} | {url}")
 
     except Exception as erro:
         print(f"[GROQ][TOOLS] Não foi possível ler executed_tools: {erro}")
 
+    fontes_prioritarias = selecionar_fontes_web(
+        fontes_candidatas,
+        consulta_usuario=consulta_usuario,
+        exigir_atualidade=exigir_atualidade,
+    )
+    urls_prioritarias = {
+        re.sub(
+            r"([?&])(utm_[^=&]+|fbclid|gclid)=[^&]*",
+            "",
+            fonte["url"],
+            flags=re.IGNORECASE,
+        ).rstrip("/").lower()
+        for fonte in fontes_prioritarias
+    }
+
+    # Mantém a lista COMPLETA e na ordem original, pois as citações nativas
+    # [1], [2], [3] da Groq usam essa posição. Apenas marcamos destaques para
+    # o frontend exibir até 5 fontes sem quebrar os links das citações.
+    for fonte in fontes_web:
+        chave = re.sub(
+            r"([?&])(utm_[^=&]+|fbclid|gclid)=[^&]*",
+            "",
+            fonte["url"],
+            flags=re.IGNORECASE,
+        ).rstrip("/").lower()
+        fonte["destaque"] = chave in urls_prioritarias
+        if fonte["destaque"]:
+            print(f"[GROQ][BROWSER] {fonte['titulo']} | {fonte['url']}")
+
     print(
         f"[GROQ][WEB] executado={browser_executado} | "
-        f"fontes_capturadas={len(fontes_web)}"
+        f"resultados_brutos={resultados_brutos} | "
+        f"fontes_unicas={len(fontes_web)} | "
+        f"fontes_em_destaque={len(fontes_prioritarias)} | "
+        f"limite_destaques={GROQ_WEB_MAX_SOURCES}"
     )
     return fontes_web, browser_executado
 
@@ -599,6 +735,8 @@ def gerar_texto(
     usar_browser_search: bool = False,
     forcar_busca_web: bool = False,
     retornar_fontes: bool = False,
+    consulta_busca: str = "",
+    exigir_atualidade_fontes: bool = False,
 ) -> str | tuple[str, list[dict], bool]:
     """Gera texto pela Groq; opcionalmente habilita browser_search."""
     if groq_client is None:
@@ -630,7 +768,12 @@ def gerar_texto(
         # Prioriza resultados brasileiros. A Browser Search da Groq não oferece
         # filtro de recência configurável; a atualidade é reforçada pelo prompt
         # e pelo isolamento do RAG em perguntas temporais de feiras.
-        parametros["search_settings"] = {"country": "brazil"}
+        parametros["search_settings"] = {
+            "country": "brazil",
+            "include_images": False,
+        }
+        # reasoning_effort=low reduz explorações longas da Browser Search.
+        parametros["reasoning_effort"] = "low"
         # 'required' força a chamada em perguntas externas identificadas;
         # 'auto' deixa o modelo decidir nas demais perguntas do chat.
         parametros["tool_choice"] = "required" if forcar_busca_web else "auto"
@@ -639,12 +782,27 @@ def gerar_texto(
             f"tool_choice={parametros['tool_choice']}"
         )
 
+    if usar_browser_search:
+        estimativa_inicial = sum(
+            estimar_tokens_aproximados(item.get("content", ""))
+            for item in parametros["messages"]
+        )
+        print(
+            "[GROQ][PROMPT_ESTIMADO] "
+            f"mensagens_iniciais≈{estimativa_inicial} tokens (caracteres/4; "
+            "não inclui resultados nem navegação interna da Browser Search)"
+        )
+
     resposta = groq_client.chat.completions.create(**parametros)
 
     fontes_web = []
     browser_executado = False
     if usar_browser_search:
-        fontes_web, browser_executado = registrar_ferramentas_executadas(resposta)
+        fontes_web, browser_executado = registrar_ferramentas_executadas(
+            resposta,
+            consulta_usuario=consulta_busca,
+            exigir_atualidade=exigir_atualidade_fontes,
+        )
 
     texto_gerado = resposta.choices[0].message.content or ""
 
@@ -668,6 +826,13 @@ def gerar_texto(
             f"cache={tokens_cache} ({aproveitamento:.1f}%) | "
             f"saída={tokens_saida} | total={tokens_total}"
         )
+        if usar_browser_search:
+            print(
+                "[GROQ][BROWSER][CUSTO] A diferença entre a entrada real e a "
+                "estimativa das mensagens iniciais inclui o ciclo interno de "
+                "pesquisa/navegação e reenvios de contexto; não representa um "
+                "contador isolado de tokens das páginas."
+            )
 
     if not texto_gerado.strip():
         raise RuntimeError("A Groq retornou uma resposta vazia.")
@@ -1680,7 +1845,7 @@ class RequisicaoGoogle(BaseModel):
 
 
 def formatar_historico_db(mensagens_db, limite=4):
-    """Usa no máximo as 4 mensagens anteriores e não duplica a mensagem atual."""
+    """Usa até 4 mensagens anteriores, com limites por mensagem e no total."""
     mensagens = list(mensagens_db or [])
 
     # A mensagem atual já foi salva no banco e será enviada separadamente abaixo.
@@ -1693,12 +1858,24 @@ def formatar_historico_db(mensagens_db, limite=4):
 
     linhas = []
     for msg in mensagens:
+        conteudo = str(msg.conteudo or "").strip()
+        if len(conteudo) > GROQ_HISTORY_MAX_MESSAGE_CHARS:
+            conteudo = (
+                conteudo[:GROQ_HISTORY_MAX_MESSAGE_CHARS].rstrip()
+                + " [mensagem anterior abreviada]"
+            )
         if msg.remetente == "user":
-            linhas.append(f"Usuário: {msg.conteudo}")
+            linhas.append(f"Usuário: {conteudo}")
         elif msg.remetente == "assistant":
-            linhas.append(f"Assistente: {msg.conteudo}")
+            linhas.append(f"Assistente: {conteudo}")
 
-    return "\n".join(linhas) if linhas else "Sem histórico anterior."
+    historico = "\n".join(linhas) if linhas else "Sem histórico anterior."
+    if len(historico) > GROQ_HISTORY_MAX_CHARS:
+        historico = (
+            "[parte mais antiga do histórico omitida]\n"
+            + historico[-GROQ_HISTORY_MAX_CHARS:]
+        )
+    return historico
 
 
 def gerar_titulo_conversa(primeira_mensagem: str) -> str:
@@ -2004,6 +2181,33 @@ def classificar_resumo_api(
             resultados_rag=resultados_rag,
             rag_consultado=exige_rag,
         )
+        busca_exige_atualidade = bool(re.search(
+            r"\b(cronograma|calend[aá]rio|prazo|inscri[cç][aã]o|data(?:s)?|"
+            r"per[ií]odo|abertura|encerramento|submiss[aã]o|edi[cç][aã]o vigente)\b",
+            mensagem or "",
+            flags=re.IGNORECASE,
+        )) and not bool(re.search(
+            r"\b(hist[oó]ric[oa]|antig[oa]s?|edi[cç][oõ]es anteriores|"
+            r"anos anteriores|em 20(?:0\d|1\d|2[0-5]))\b",
+            mensagem or "",
+            flags=re.IGNORECASE,
+        ))
+
+        if exige_busca_web:
+            texto_rag_estimado = formatar_contexto_rag(
+                resultados_rag,
+                rag_consultado=exige_rag,
+            )
+            print(
+                "[GROQ][CONTEXTO_ESTIMADO] "
+                f"sistema≈{estimar_tokens_aproximados(SYSTEM_PROMPT_CHAT_RAG)} | "
+                f"feira≈{estimar_tokens_aproximados(contexto_feira)} | "
+                f"histórico≈{estimar_tokens_aproximados(historico_formatado)} | "
+                f"RAG≈{estimar_tokens_aproximados(texto_rag_estimado)} | "
+                f"pergunta≈{estimar_tokens_aproximados(mensagem)} | "
+                "estimativa por caracteres/4; não inclui ferramentas"
+            )
+
         if pergunta_calendario_atual:
             prompt_conversa += (
                 "\n\nPESQUISA TEMPORAL PRIORITÁRIA:\n"
@@ -2024,6 +2228,8 @@ def classificar_resumo_api(
             usar_browser_search=exige_busca_web,
             forcar_busca_web=exige_busca_web,
             retornar_fontes=True,
+            consulta_busca=mensagem,
+            exigir_atualidade_fontes=busca_exige_atualidade,
         )
         resposta_ia, fontes_web, busca_web_executada = resposta_gerada
 
