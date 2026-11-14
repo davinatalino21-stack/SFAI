@@ -1855,6 +1855,7 @@ class RequisicaoProjeto(BaseModel):
     modo: str = "conversa"
     mensagem: str = ""
     stream: bool = False
+    regenerar: bool = False
 
 
 class RequisicaoCadastro(BaseModel):
@@ -2088,6 +2089,7 @@ def gerar_eventos_chat_stream(
     usar_pesquisa_web: bool,
     consulta_busca: str,
     exigir_atualidade_fontes: bool,
+    mensagem_assistente_substituir_id: uuid.UUID | None = None,
 ):
     """Gera eventos SSE com os tokens da resposta e persiste o texto completo."""
 
@@ -2173,14 +2175,27 @@ def gerar_eventos_chat_stream(
             fontes_consolidadas = fontes_rag + fontes_web
             db_stream = SessionLocal()
             try:
-                db_stream.add(
-                    Mensagem(
-                        conversa_id=conversa_id,
-                        remetente="assistant",
-                        conteudo=resposta_ia,
-                        fontes=fontes_consolidadas,
+                if mensagem_assistente_substituir_id is not None:
+                    mensagem_existente = (
+                        db_stream.query(Mensagem)
+                        .filter(Mensagem.id == mensagem_assistente_substituir_id)
+                        .first()
                     )
-                )
+                    if mensagem_existente is None:
+                        raise RuntimeError(
+                            "A resposta anterior não foi encontrada para substituição."
+                        )
+                    mensagem_existente.conteudo = resposta_ia
+                    mensagem_existente.fontes = fontes_consolidadas
+                else:
+                    db_stream.add(
+                        Mensagem(
+                            conversa_id=conversa_id,
+                            remetente="assistant",
+                            conteudo=resposta_ia,
+                            fontes=fontes_consolidadas,
+                        )
+                    )
                 db_stream.commit()
             finally:
                 db_stream.close()
@@ -2301,20 +2316,49 @@ def classificar_resumo_api(
 
         id_conversa_uuid = conversa.id
 
-    conteudo_usuario = (
-        mensagem
-        if modo == "conversa"
-        else f"Classificar resumo: {texto}"
-    )
+    mensagem_assistente_substituir_id = None
+    if dados.regenerar:
+        if modo != "conversa" or not conversa_id_str:
+            raise HTTPException(
+                status_code=400,
+                detail="Só é possível regenerar uma resposta de conversa existente.",
+            )
 
-    nova_msg_user = Mensagem(
-        conversa_id=id_conversa_uuid,
-        remetente="user",
-        conteudo=conteudo_usuario,
-    )
+        ultimas_mensagens = (
+            db.query(Mensagem)
+            .filter(Mensagem.conversa_id == id_conversa_uuid)
+            .order_by(Mensagem.horario.desc())
+            .limit(2)
+            .all()
+        )
 
-    db.add(nova_msg_user)
-    db.commit()
+        if (
+            len(ultimas_mensagens) != 2
+            or ultimas_mensagens[0].remetente != "assistant"
+            or ultimas_mensagens[1].remetente != "user"
+            or ultimas_mensagens[1].conteudo != mensagem
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Só é possível regenerar a resposta mais recente da conversa.",
+            )
+
+        mensagem_assistente_substituir_id = ultimas_mensagens[0].id
+    else:
+        conteudo_usuario = (
+            mensagem
+            if modo == "conversa"
+            else f"Classificar resumo: {texto}"
+        )
+
+        nova_msg_user = Mensagem(
+            conversa_id=id_conversa_uuid,
+            remetente="user",
+            conteudo=conteudo_usuario,
+        )
+
+        db.add(nova_msg_user)
+        db.commit()
 
     # ========================================================
     # MODO CONVERSA + RAG
@@ -2323,9 +2367,16 @@ def classificar_resumo_api(
     if modo == "conversa":
         # Busca somente as 5 mensagens mais recentes: 4 de histórico + a
         # mensagem atual, que será enviada separadamente no prompt.
+        consulta_mensagens_recentes = db.query(Mensagem).filter(
+            Mensagem.conversa_id == id_conversa_uuid
+        )
+        if mensagem_assistente_substituir_id is not None:
+            consulta_mensagens_recentes = consulta_mensagens_recentes.filter(
+                Mensagem.id != mensagem_assistente_substituir_id
+            )
+
         mensagens_recentes = (
-            db.query(Mensagem)
-            .filter(Mensagem.conversa_id == id_conversa_uuid)
+            consulta_mensagens_recentes
             .order_by(Mensagem.horario.desc())
             .limit(5)
             .all()
@@ -2446,6 +2497,7 @@ def classificar_resumo_api(
                     usar_pesquisa_web=exige_busca_web,
                     consulta_busca=mensagem,
                     exigir_atualidade_fontes=busca_exige_atualidade,
+                    mensagem_assistente_substituir_id=mensagem_assistente_substituir_id,
                 ),
                 media_type="text/event-stream",
                 headers={
@@ -2468,14 +2520,28 @@ def classificar_resumo_api(
         resposta_ia, fontes_web, busca_web_executada = resposta_gerada
         fontes_consolidadas = fontes_rag + fontes_web
 
-        nova_msg_assistant = Mensagem(
-            conversa_id=id_conversa_uuid,
-            remetente="assistant",
-            conteudo=resposta_ia,
-            fontes=fontes_consolidadas,
-        )
+        if mensagem_assistente_substituir_id is not None:
+            mensagem_existente = (
+                db.query(Mensagem)
+                .filter(Mensagem.id == mensagem_assistente_substituir_id)
+                .first()
+            )
+            if mensagem_existente is None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="A resposta anterior não está mais disponível para substituição.",
+                )
+            mensagem_existente.conteudo = resposta_ia
+            mensagem_existente.fontes = fontes_consolidadas
+        else:
+            nova_msg_assistant = Mensagem(
+                conversa_id=id_conversa_uuid,
+                remetente="assistant",
+                conteudo=resposta_ia,
+                fontes=fontes_consolidadas,
+            )
+            db.add(nova_msg_assistant)
 
-        db.add(nova_msg_assistant)
         db.commit()
 
         return {
