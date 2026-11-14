@@ -1858,8 +1858,6 @@ class RequisicaoProjeto(BaseModel):
     regenerar: bool = False
     acao_resposta: str | None = None
     resposta_alvo: str | None = None
-    acao_resposta: str | None = None
-    resposta_alvo: str | None = None
 
 
 class RequisicaoCadastro(BaseModel):
