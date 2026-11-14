@@ -416,8 +416,8 @@ SYSTEM_PROMPT_CHAT_RAG = (
     "Para pie/doughnut, use exatamente um dataset, labels com os nomes das fatias "
     "e data com um número não negativo por fatia, na mesma ordem; o campo label do "
     "dataset é opcional. Exemplo: "
-    "{\"type\":\"pie\",\"title\":\"Distribuição\",\"labels\":[\"A\",\"B\",\"C\"],"
-    "\"datasets\":[{\"data\":[30,45,25]}]}. "
+    '{"type":"pie","title":"Distribuição","labels":["A","B","C"],'
+    '"datasets":[{"data":[30,45,25]}]}. '
     "Não use porcentagens como texto dentro de data: envie números. "
     "Para scatter, omita labels e use data como "
     "pares de objetos {\"x\":numero,\"y\":numero}. O gráfico deve ter apenas os dados "
