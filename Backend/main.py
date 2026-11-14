@@ -344,12 +344,6 @@ GROQ_HISTORY_MAX_CHARS = int(os.environ.get("GROQ_HISTORY_MAX_CHARS", "5000"))
 GROQ_HISTORY_MAX_MESSAGE_CHARS = int(
     os.environ.get("GROQ_HISTORY_MAX_MESSAGE_CHARS", "1500")
 )
-# Limite de referências destacadas no painel; a lista completa é preservada
-# para que os índices das citações nativas da Groq continuem corretos.
-GROQ_WEB_MAX_SOURCES = max(
-    1, min(int(os.environ.get("GROQ_WEB_MAX_SOURCES", "5")), 10)
-)
-
 # Pesquisa externa controlada pelo backend via Tavily.
 TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY", "").strip()
 TAVILY_MAX_RESULTS = max(1, min(int(os.environ.get("TAVILY_MAX_RESULTS", "5")), 5))
@@ -465,7 +459,7 @@ def data_hora_atual_brasil() -> str:
 
 
 def pergunta_exige_busca_web(mensagem: str, contexto_conversa: str = "") -> bool:
-    """Detecta intenções externas/mutáveis que devem obrigar browser_search.
+    """Detecta intenções externas/mutáveis que devem acionar a pesquisa Tavily.
 
     Considera também a pergunta anterior para reconhecer continuações curtas
     como "e quanto ao prazo?" ou "e as notícias mais recentes?".
@@ -593,6 +587,8 @@ def buscar_na_tavily(
     consulta_limpa = (consulta or "").strip()
     if not consulta_limpa:
         return [], False, "Consulta de pesquisa vazia.", None
+    if exigir_atualidade:
+        consulta_limpa += " edital calendário prazos inscrição página oficial edição vigente"
 
     payload = {
         "query": consulta_limpa,
