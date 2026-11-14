@@ -2279,6 +2279,12 @@ def classificar_resumo_api(
     usuario_id = usuario_logado
     conversa_id_str = dados.conversa_id
 
+    if dados.regenerar and (modo != "conversa" or not conversa_id_str):
+        raise HTTPException(
+            status_code=400,
+            detail="Só é possível regenerar uma resposta de conversa existente.",
+        )
+
     if conversa_id_str:
         try:
             id_conversa_uuid = uuid.UUID(conversa_id_str)
