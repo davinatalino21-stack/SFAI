@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, EmailStr
 import json
 import os
@@ -1854,6 +1854,7 @@ class RequisicaoProjeto(BaseModel):
     feira: str = ""
     modo: str = "conversa"
     mensagem: str = ""
+    stream: bool = False
 
 
 class RequisicaoCadastro(BaseModel):
@@ -2072,6 +2073,184 @@ def servir_documento(nome_arquivo: str):
 # ROTA DE INTELIGÊNCIA ARTIFICIAL E CHAT
 # ============================================================
 
+
+def _formatar_evento_sse(evento: str, dados: dict) -> str:
+    """Serializa um evento Server-Sent Events em JSON UTF-8."""
+    conteudo = json.dumps(dados, ensure_ascii=False, separators=(",", ":"))
+    return f"event: {evento}\ndata: {conteudo}\n\n"
+
+
+def gerar_eventos_chat_stream(
+    prompt: str,
+    conversa_id: uuid.UUID,
+    titulo: str,
+    fontes_rag: list[dict],
+    usar_pesquisa_web: bool,
+    consulta_busca: str,
+    exigir_atualidade_fontes: bool,
+):
+    """Gera eventos SSE com os tokens da resposta e persiste o texto completo."""
+
+    def _gerador():
+        if groq_client is None:
+            yield _formatar_evento_sse(
+                "error",
+                {"detail": {"message": "GROQ_API_KEY não foi configurada no servidor."}},
+            )
+            return
+
+        fontes_web = []
+        pesquisa_web_executada = False
+        prompt_final = prompt
+
+        if usar_pesquisa_web:
+            fontes_web, pesquisa_web_executada, erro_pesquisa, creditos_tavily = buscar_na_tavily(
+                consulta_busca,
+                exigir_atualidade=exigir_atualidade_fontes,
+            )
+            prompt_final += montar_contexto_pesquisa_web(
+                fontes_web,
+                erro_pesquisa=erro_pesquisa,
+            )
+            print(
+                "[GROQ][TAVILY][CONTEXTO] "
+                f"fontes_enviadas={len(fontes_web)} | "
+                f"caracteres≈{sum(len(f.get('conteudo', '')) for f in fontes_web)} | "
+                f"creditos={creditos_tavily if creditos_tavily is not None else 'n/d'}"
+            )
+
+        system_final = SYSTEM_PROMPT_CHAT_RAG
+        system_final += (
+            "\n\nDATA E HORA ATUAIS: "
+            f"{data_hora_atual_brasil()}. "
+            "Use esta informação para interpretar expressões temporais, mas ela "
+            "não substitui a pesquisa web para confirmar fatos atuais."
+        )
+
+        parametros = {
+            "model": MODELO_GROQ,
+            "messages": [
+                {"role": "system", "content": system_final},
+                {"role": "user", "content": prompt_final},
+            ],
+            "max_tokens": GROQ_MAX_CHAT_TOKENS,
+            "temperature": 0.2,
+            "stream": True,
+        }
+
+        if usar_pesquisa_web:
+            parametros["reasoning_effort"] = "low"
+            estimativa_inicial = sum(
+                estimar_tokens_aproximados(item.get("content", ""))
+                for item in parametros["messages"]
+            )
+            print(
+                "[GROQ][PROMPT_ESTIMADO] "
+                f"mensagens_iniciais≈{estimativa_inicial} tokens "
+                "(caracteres/4; inclui os trechos selecionados da Tavily)"
+            )
+
+        resposta_partes = []
+        try:
+            fluxo = groq_client.chat.completions.create(**parametros)
+
+            for bloco in fluxo:
+                if not getattr(bloco, "choices", None):
+                    continue
+                delta = getattr(bloco.choices[0], "delta", None)
+                trecho = getattr(delta, "content", None) if delta else None
+                if not trecho:
+                    continue
+
+                trecho = str(trecho)
+                resposta_partes.append(trecho)
+                yield _formatar_evento_sse("delta", {"content": trecho})
+
+            resposta_ia = "".join(resposta_partes).strip()
+            if not resposta_ia:
+                raise RuntimeError("A Groq retornou uma resposta vazia.")
+
+            fontes_consolidadas = fontes_rag + fontes_web
+            db_stream = SessionLocal()
+            try:
+                db_stream.add(
+                    Mensagem(
+                        conversa_id=conversa_id,
+                        remetente="assistant",
+                        conteudo=resposta_ia,
+                        fontes=fontes_consolidadas,
+                    )
+                )
+                db_stream.commit()
+            finally:
+                db_stream.close()
+
+            yield _formatar_evento_sse(
+                "done",
+                {
+                    "conversa_id": str(conversa_id),
+                    "titulo": titulo,
+                    "resultado": resposta_ia,
+                    "fontes": fontes_consolidadas,
+                    "fontes_rag": fontes_rag,
+                    "fontes_web": fontes_web,
+                    "busca_web_solicitada": usar_pesquisa_web,
+                    "busca_web_executada": pesquisa_web_executada,
+                },
+            )
+
+        except RateLimitError as erro:
+            retry_after = obter_retry_after_segundos(erro)
+            mensagem_usuario = (
+                "O serviço de IA atingiu o limite temporário de uso. "
+                "Aguarde a renovação da cota e tente novamente."
+            )
+            if retry_after is not None:
+                minutos = retry_after // 60
+                segundos = retry_after % 60
+                prazo = (
+                    f"{minutos} min e {segundos} s"
+                    if minutos
+                    else f"{segundos} s"
+                )
+                mensagem_usuario = (
+                    "O serviço de IA atingiu o limite de uso. "
+                    f"Tente novamente em aproximadamente {prazo}."
+                )
+
+            print(
+                "[GROQ][RATE_LIMIT][STREAM] HTTP 429 recebido | "
+                f"retry_after={retry_after if retry_after is not None else 'não informado'}s"
+            )
+            yield _formatar_evento_sse(
+                "error",
+                {
+                    "detail": {
+                        "code": "groq_rate_limit",
+                        "message": mensagem_usuario,
+                        "retry_after_seconds": retry_after,
+                    }
+                },
+            )
+
+        except Exception as erro:
+            print(f"[GROQ][STREAM][ERRO] {type(erro).__name__}: {erro}")
+            yield _formatar_evento_sse(
+                "error",
+                {
+                    "detail": {
+                        "code": "stream_generation_error",
+                        "message": (
+                            "Não foi possível concluir a geração da resposta. "
+                            "Tente novamente."
+                        ),
+                    }
+                },
+            )
+
+    return _gerador()
+
+
 @app.post("/classificar")
 def classificar_resumo_api(
     dados: RequisicaoProjeto,
@@ -2247,6 +2426,35 @@ def classificar_resumo_api(
                 "- Se não encontrar confirmação oficial da edição vigente, informe que não foi possível verificar.\n"
             )
 
+        fontes_rag = [
+            {
+                "tipo": "rag",
+                "arquivo": item["arquivo"],
+                "pagina": item["pagina"],
+                "similaridade": round(item["similaridade"], 4),
+            }
+            for item in resultados_rag
+        ]
+
+        if dados.stream:
+            return StreamingResponse(
+                gerar_eventos_chat_stream(
+                    prompt=prompt_conversa,
+                    conversa_id=id_conversa_uuid,
+                    titulo=conversa.titulo,
+                    fontes_rag=fontes_rag,
+                    usar_pesquisa_web=exige_busca_web,
+                    consulta_busca=mensagem,
+                    exigir_atualidade_fontes=busca_exige_atualidade,
+                ),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache, no-transform",
+                    "X-Accel-Buffering": "no",
+                    "Connection": "keep-alive",
+                },
+            )
+
         resposta_gerada = gerar_texto(
             prompt_conversa,
             max_tokens=GROQ_MAX_CHAT_TOKENS,
@@ -2258,16 +2466,6 @@ def classificar_resumo_api(
             exigir_atualidade_fontes=busca_exige_atualidade,
         )
         resposta_ia, fontes_web, busca_web_executada = resposta_gerada
-
-        fontes_rag = [
-            {
-                "tipo": "rag",
-                "arquivo": item["arquivo"],
-                "pagina": item["pagina"],
-                "similaridade": round(item["similaridade"], 4),
-            }
-            for item in resultados_rag
-        ]
         fontes_consolidadas = fontes_rag + fontes_web
 
         nova_msg_assistant = Mensagem(
