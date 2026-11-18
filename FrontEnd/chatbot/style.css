@@ -30,7 +30,13 @@
   border-right: 1px solid var(--border);
   padding: 12px 10px;
   z-index: 40;
-  transition: width 0.25s ease, min-width 0.25s ease;
+  overflow: hidden;
+  transition:
+    width .42s cubic-bezier(.22, 1, .36, 1),
+    min-width .42s cubic-bezier(.22, 1, .36, 1),
+    padding .32s ease,
+    box-shadow .32s ease;
+  will-change: width, min-width;
 }
 
 .sidebar.collapsed {
@@ -174,8 +180,22 @@
   padding: 11px 0;
 }
 
+.sidebar .nav-label {
+  display: inline-block;
+  max-width: 190px;
+  overflow: hidden;
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    max-width .32s cubic-bezier(.22, 1, .36, 1),
+    opacity .2s ease,
+    transform .32s cubic-bezier(.22, 1, .36, 1);
+}
+
 .sidebar.collapsed .nav-label {
-  display: none;
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(-8px);
 }
 
 /* ----------------------------- Topbar / Hero ----------------------------- */
@@ -848,7 +868,10 @@
   backdrop-filter: blur(2px);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  transition:
+    opacity .38s ease,
+    backdrop-filter .42s ease;
+  backdrop-filter: blur(0);
   z-index: 210;
   border: none;
   cursor: default;
@@ -857,6 +880,7 @@
 .drawer-backdrop.is-visible {
   opacity: 1;
   pointer-events: auto;
+  backdrop-filter: blur(6px);
 }
 
 .drawer {
@@ -872,13 +896,42 @@
   border-right: 1px solid var(--border);
   box-shadow: var(--shadow);
   z-index: 230;
-  transform: translateX(-104%);
-  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(-104%, 0, 0) scale(.985);
+  transform-origin: left center;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0);
+  transition:
+    transform .44s cubic-bezier(.16, 1, .3, 1),
+    opacity .28s ease,
+    box-shadow .38s ease;
+  will-change: transform, opacity;
   overflow: hidden;
 }
 
 .drawer.is-open {
-  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .24);
+}
+
+.drawer.is-open .drawer-header,
+.drawer.is-open .drawer-subtitle,
+.drawer.is-open .hist-list,
+.drawer.is-open .hist-empty {
+  animation: sfaiDrawerContentIn .38s .04s both;
+}
+
+@keyframes sfaiDrawerContentIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .drawer-header {
@@ -2010,37 +2063,61 @@
 }
 
 
-/* Botão para encerrar a conversa atual e começar outra. */
+/* O botão acompanha a área principal: sua posição muda junto com a largura da sidebar. */
 .app-main {
   position: relative;
 }
 
-.new-chat-close {
-  position: absolute;
-  top: max(14px, env(safe-area-inset-top));
-  left: clamp(14px, 2vw, 24px);
-  z-index: 180;
-  display: inline-grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  padding: 0;
-  border: 1px solid var(--border);
+#newChatCloseButton.new-chat-close {
+  position: absolute !important;
+  top: max(14px, env(safe-area-inset-top)) !important;
+  left: 34px !important;
+  right: auto !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  z-index: 190;
+  border: 1px solid rgba(148,163,184,.35);
   border-radius: 50%;
-  color: var(--text);
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-  box-shadow: var(--shadow-sm);
+  color: #e7eef8;
+  background: #14253b;
+  box-shadow: 0 6px 20px rgba(0,0,0,.22);
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: color .2s ease, background .2s ease, border-color .2s ease, transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .2s ease;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    color .2s ease,
+    background .2s ease,
+    border-color .2s ease,
+    transform .28s cubic-bezier(.2,.8,.2,1),
+    opacity .2s ease,
+    box-shadow .2s ease;
 }
 
-.new-chat-close svg {
-  width: 19px;
-  height: 19px;
+#newChatCloseButton > svg {
+  display: block !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  max-width: 20px !important;
+  max-height: 20px !important;
+  flex: 0 0 20px !important;
 }
 
-.new-chat-close:hover {
+#newChatCloseButton:hover {
   color: var(--accent);
   background: var(--surface-hover);
   border-color: var(--accent);
@@ -2048,13 +2125,33 @@
   box-shadow: var(--shadow);
 }
 
-.new-chat-close:active {
+#newChatCloseButton:active {
   transform: rotate(90deg) scale(.92);
 }
 
-.new-chat-close:focus-visible {
+#newChatCloseButton:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
+}
+
+@media (max-width: 932px) {
+  #newChatCloseButton.new-chat-close {
+    top: max(14px, env(safe-area-inset-top)) !important;
+    left: 14px !important;
+  }
+
+  .app.panels-open #newChatCloseButton {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transform: translateX(-10px) scale(.82) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #newChatCloseButton {
+    transition: none !important;
+  }
 }
 
 /* Transição de saída e entrada ao trocar de conversa. */
