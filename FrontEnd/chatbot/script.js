@@ -1555,10 +1555,16 @@ async function abrirConversa(conversaId) {
 
       if (role === "assistant") {
         let conteudo = msg.conteudo;
+        if (msg.id) messageElement.dataset.messageId = String(msg.id);
 
         messageElement.innerHTML = formatarRespostaIA(conteudo, msg.fontes);
 
-        chatMessages.push({ role, content: conteudo, fontes: msg.fontes || [] });
+        chatMessages.push({
+          role,
+          content: conteudo,
+          fontes: msg.fontes || [],
+          messageId: msg.id || null,
+        });
         historicoConversa.push({ role, content: conteudo });
 
         chatArea.appendChild(messageElement);
@@ -1740,6 +1746,7 @@ function carregarConversaAtual() {
           );
 
           if (item.role === "assistant") {
+            if (item.messageId) messageElement.dataset.messageId = String(item.messageId);
             messageElement.innerHTML = formatarRespostaIA(item.content, item.fontes);
           } else {
             messageElement.textContent = item.content;
@@ -2088,6 +2095,7 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
       void enviarMensagem(rotulos[acao], {
         transformacao: acao,
         respostaAlvo: String(texto || ""),
+        respostaAlvoId: elemento.dataset.messageId || null,
       });
     }
   });
@@ -2239,6 +2247,7 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
         regenerar: regenerando,
         acao_resposta: transformacao || null,
         resposta_alvo: transformacao ? (opcoes.respostaAlvo || "") : null,
+        resposta_alvo_id: transformacao ? (opcoes.respostaAlvoId || null) : null,
         imagens: imagensParaEnvio.map((anexo) => anexo.dataUrl),
       }),
     });
@@ -2256,7 +2265,17 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
     let respostaEmStreaming = false;
 
     if (!response.ok) {
-      data = await response.json();
+      const corpoErro = await response.text();
+      try {
+        data = corpoErro ? JSON.parse(corpoErro) : {};
+      } catch {
+        data = {
+          detail: {
+            message: corpoErro.slice(0, 400) ||
+              `O servidor respondeu com HTTP ${response.status}.`,
+          },
+        };
+      }
     } else if (
       modo === "conversa" &&
       response.headers.get("content-type")?.includes("text/event-stream")
@@ -2339,10 +2358,13 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
             ...(Array.isArray(data.fontes_web) ? data.fontes_web : []),
           ];
 
+      if (data.mensagem_id) aiElement.dataset.messageId = String(data.mensagem_id);
+
       chatMessages.push({
         role: "assistant",
         content: textoIA,
         fontes: fontesResposta,
+        messageId: data.mensagem_id || null,
       });
       salvarConversaAtual();
 
