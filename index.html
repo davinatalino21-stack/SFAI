@@ -19,7 +19,7 @@
     <div class="app">
       <aside class="sidebar" aria-label="Navegação principal">
         <div class="sidebar-header">
-          <button type="button" class="brand" onclick="window.location.href = 'Layout.html'" title="Página inicial">La<span>r</span></button>
+          <button type="button" class="brand" onclick="window.location.href = 'Layout.html'" title="Página inicial">SF<span>AI</span></button>
           <button type="button" class="sidebar-toggle" title="Compactar menu" aria-label="Compactar menu" aria-expanded="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
@@ -35,9 +35,11 @@
       </aside>
 
       <div class="app-main">
+        <button type="button" id="newChatCloseButton" class="new-chat-close" title="Nova conversa" aria-label="Fechar a conversa atual e iniciar uma nova">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
         <main class="chat-stage">
           <section id="chat-container" class="chat-container" aria-label="Mensagens do assistente">
-            <div class="chat-head" id="chatHead" aria-hidden="true"><h1>SF<span>AI</span></h1></div>
             <div id="chat-area" class="chat-area" tabindex="0" aria-live="polite">
               <div class="message bot">Olá 👋 Pergunte qualquer coisa sobre as Feiras de Ciências, horários e muito mais!</div>
             </div>
@@ -47,10 +49,7 @@
 
         <div class="composer-shell" aria-label="Campo de mensagem">
           <div class="composer-inner">
-            <section class="hero" id="hero">
-              <h1>SF<span>AI</span></h1>
-              <p>Assistente inteligente para ajudar você a organizar seu projeto</p>
-            </section>
+            <section class="hero" id="hero" aria-hidden="true"></section>
 
             <div class="suggestion-carousel" aria-label="Sugestões de conversa">
               <button class="suggestion-arrow suggestion-arrow-left" type="button" aria-label="Sugestão anterior" onclick="moverSugestoes(-1)">‹</button>
