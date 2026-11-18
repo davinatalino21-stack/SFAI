@@ -775,6 +775,8 @@ def gerar_texto(
     retornar_fontes: bool = False,
     consulta_busca: str = "",
     exigir_atualidade_fontes: bool = False,
+    reasoning_effort: str | None = None,
+    include_reasoning: bool | None = None,
 ) -> str | tuple[str, list[dict], bool]:
     """Gera texto pela Groq, anexando resultados externos da Tavily quando necessário."""
     if groq_client is None:
@@ -818,6 +820,11 @@ def gerar_texto(
         "max_tokens": max_tokens,
         "temperature": 0.2,
     }
+
+    if reasoning_effort:
+        parametros["reasoning_effort"] = reasoning_effort
+    if include_reasoning is not None:
+        parametros["include_reasoning"] = include_reasoning
 
     if usar_pesquisa_web:
         # Mantém o esforço de raciocínio baixo nas respostas que já chegam
@@ -871,7 +878,20 @@ def gerar_texto(
             ),
         ) from erro
 
-    texto_gerado = resposta.choices[0].message.content or ""
+    escolha = resposta.choices[0] if resposta.choices else None
+    mensagem_resposta = getattr(escolha, "message", None)
+    texto_gerado = getattr(mensagem_resposta, "content", None) or ""
+
+    if not str(texto_gerado).strip():
+        motivo_fim = getattr(escolha, "finish_reason", None)
+        raciocinio = getattr(mensagem_resposta, "reasoning", None)
+        tamanho_raciocinio = len(raciocinio) if isinstance(raciocinio, str) else 0
+        print(
+            "[GROQ][RESPOSTA_VAZIA] "
+            f"finish_reason={motivo_fim or 'desconhecido'} | "
+            f"reasoning_chars={tamanho_raciocinio} | max_tokens={max_tokens} | "
+            f"reasoning_effort={reasoning_effort or 'padrão'}"
+        )
 
     # cached_tokens permite confirmar se o Prefix/Prompt Caching foi aproveitado.
     usage = getattr(resposta, "usage", None)
@@ -2835,11 +2855,13 @@ def classificar_resumo_api(
             resposta_transformada = gerar_texto(
                 prompt_transformacao,
                 max_tokens=(
-                    min(420, max(100, int(limite_palavras_resumo * 1.8)))
+                    min(1024, max(700, int(limite_palavras_resumo * 4)))
                     if acao_resposta == "summarize"
                     else GROQ_MAX_CHAT_TOKENS
                 ),
                 system_prompt=system_prompt_transformacao,
+                reasoning_effort="low",
+                include_reasoning=False,
             )
         except Exception as erro:
             print(
@@ -2875,8 +2897,10 @@ def classificar_resumo_api(
             try:
                 resposta_transformada = gerar_texto(
                     prompt_resumo_corretivo,
-                    max_tokens=min(420, max(100, int(limite_palavras_resumo * 1.8))),
+                    max_tokens=min(1024, max(700, int(limite_palavras_resumo * 4))),
                     system_prompt=system_prompt_transformacao,
+                    reasoning_effort="low",
+                    include_reasoning=False,
                 )
             except Exception as erro:
                 print(
