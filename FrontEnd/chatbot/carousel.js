@@ -18,6 +18,7 @@
     if (quantidade < 2) return;
 
     track.dataset.carouselReady = "true";
+    carousel.classList.remove("is-ready");
 
     function clonarCard(card) {
       const clone = card.cloneNode(true);
@@ -224,7 +225,8 @@ function centralizarCard(indice, comportamento = "smooth") {
 
     requestAnimationFrame(() => {
       centralizarCard(quantidade, "auto");
-      solicitarAtualizacao();
+      atualizarProfundidade();
+      carousel.classList.add("is-ready");
       agendarAutomatico();
     });
 
