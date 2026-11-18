@@ -245,8 +245,10 @@ function centralizarCard(indice, comportamento = "smooth") {
     // O ResizeObserver o reposiciona assim que a área volta a ter largura.
     if ("ResizeObserver" in window) {
       const observadorLayout = new ResizeObserver(() => {
-        if (track.clientWidth > 0 && carousel.classList.contains("is-ready")) {
-          reposicionarAposLayout(false);
+        if (track.clientWidth > 0) {
+          // Quando a página abriu já dentro de uma conversa, o carrossel
+          // ainda não recebeu seu primeiro alinhamento.
+          reposicionarAposLayout(!carousel.classList.contains("is-ready"));
         }
       });
       observadorLayout.observe(carousel);
