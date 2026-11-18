@@ -1599,41 +1599,83 @@ async function abrirConversa(conversaId) {
 }
 
 
+let novaConversaEmAndamento = false;
+
 function novaConversa() {
-  conversaAtualId = null;
-  chatMessages = [];
-  historicoConversa = [];
+  if (novaConversaEmAndamento) return;
+  novaConversaEmAndamento = true;
 
-  chatArea.innerHTML = `<div class="message bot">Olá 👋 Pergunte qualquer coisa sobre as Feiras de Ciências, Horários e muito mais!</div>`;
+  const finalizarNovaConversa = () => {
+    // Interrompe uma resposta ainda em geração antes de limpar a tela.
+    if (requisicaoChatAtiva) {
+      requisicaoChatAtiva.abort();
+      requisicaoChatAtiva = null;
+    }
 
-  const chatAra = document.getElementById("hero");
+    conversaAtualId = null;
+    chatMessages = [];
+    historicoConversa = [];
+    chatArea.innerHTML = `<div class="message bot">Olá 👋 Pergunte qualquer coisa sobre as Feiras de Ciências, Horários e muito mais!</div>`;
 
-  if (chatAra) {
-    chatAra.classList.remove("fade-out1");
-    chatAra.style.display = "block";
-  }
+    const chatAra = document.getElementById("hero");
+    if (chatAra) {
+      chatAra.classList.remove("fade-out1");
+      chatAra.style.display = "block";
+    }
 
-  if (chatContainer) {
-    chatContainer.classList.remove("expanded");
-  }
+    if (chatContainer) chatContainer.classList.remove("expanded");
 
-  // Restaura o rodapé em telas menores.
-  const footer = document.querySelector("footer");
-  if (footer) footer.style.display = "";
+    // Restaura o rodapé em telas menores.
+    const footer = document.querySelector("footer");
+    if (footer) footer.style.display = "";
 
-  primeiravez = true;
-  input.value = "";
-  resetarAlturaTextarea();
+    // Uma nova conversa começa sem anexos nem seleção de feira anterior.
+    imagensAnexadas = [];
+    if (imageInput) imageInput.value = "";
+    renderizarPreviaImagens();
+    if (imageStatus) imageStatus.textContent = "";
+    feiraSelecionada = "";
+    document.getElementById("feiraPopup")?.classList.remove("show");
+    document.getElementById("feiraToggle")?.setAttribute("aria-expanded", "false");
 
-  const histList = document.getElementById("histList");
-  if (histList) {
-    histList.querySelectorAll(".hist-item").forEach((el) => {
-      el.classList.toggle("active", false);
+    primeiravez = true;
+    input.value = "";
+    resetarAlturaTextarea();
+
+    const histList = document.getElementById("histList");
+    if (histList) {
+      histList.querySelectorAll(".hist-item").forEach((el) => {
+        el.classList.remove("active");
+      });
+    }
+
+    fecharPainéis();
+
+    if (!appMain) {
+      novaConversaEmAndamento = false;
+      return;
+    }
+
+    appMain.classList.remove("chat-transition-out");
+    appMain.classList.add("chat-transition-in");
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        appMain.classList.remove("chat-transition-in");
+        novaConversaEmAndamento = false;
+      });
     });
+  };
+
+  const reduzirMovimento = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (!appMain || reduzirMovimento) {
+    finalizarNovaConversa();
+    return;
   }
 
-  browser();
-  fecharFaq();
+  appMain.classList.remove("chat-transition-in");
+  appMain.classList.add("chat-transition-out");
+  window.setTimeout(finalizarNovaConversa, 220);
 }
 
 function limparHistorico() {
@@ -2492,6 +2534,11 @@ window.onload = async function () {
   const btnNewChat = document.getElementById("btnNewChat");
   if (btnNewChat) {
     btnNewChat.addEventListener("click", novaConversa);
+  }
+
+  const newChatCloseButton = document.getElementById("newChatCloseButton");
+  if (newChatCloseButton) {
+    newChatCloseButton.addEventListener("click", novaConversa);
   }
 
   carregarConversas();
