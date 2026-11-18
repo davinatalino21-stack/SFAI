@@ -1952,6 +1952,7 @@ class RequisicaoProjeto(BaseModel):
     regenerar: bool = False
     acao_resposta: str | None = None
     resposta_alvo: str | None = None
+    resposta_alvo_id: str | None = None
     imagens: list[str] = Field(default_factory=list)
 
 
@@ -2274,6 +2275,7 @@ def obter_mensagens_conversa(
 
     return [
         {
+            "id": str(m.id),
             "remetente": m.remetente,
             "conteudo": m.conteudo,
             "fontes": m.fontes or [],
@@ -2438,6 +2440,7 @@ def gerar_eventos_chat_stream(
                 raise RuntimeError("A Groq retornou uma resposta vazia.")
 
             fontes_consolidadas = fontes_rag + fontes_web + (fontes_adicionais or [])
+            id_mensagem_assistente = mensagem_assistente_substituir_id
             db_stream = SessionLocal()
             try:
                 if mensagem_assistente_substituir_id is not None:
@@ -2453,14 +2456,15 @@ def gerar_eventos_chat_stream(
                     mensagem_existente.conteudo = resposta_ia
                     mensagem_existente.fontes = fontes_consolidadas
                 else:
-                    db_stream.add(
-                        Mensagem(
-                            conversa_id=conversa_id,
-                            remetente="assistant",
-                            conteudo=resposta_ia,
-                            fontes=fontes_consolidadas,
-                        )
+                    mensagem_nova = Mensagem(
+                        conversa_id=conversa_id,
+                        remetente="assistant",
+                        conteudo=resposta_ia,
+                        fontes=fontes_consolidadas,
                     )
+                    db_stream.add(mensagem_nova)
+                    db_stream.flush()
+                    id_mensagem_assistente = mensagem_nova.id
                 db_stream.commit()
             finally:
                 db_stream.close()
@@ -2468,6 +2472,7 @@ def gerar_eventos_chat_stream(
             yield _formatar_evento_sse(
                 "done",
                 {
+                    "mensagem_id": str(id_mensagem_assistente) if id_mensagem_assistente else None,
                     "conversa_id": str(conversa_id),
                     "titulo": titulo,
                     "resultado": resposta_ia,
@@ -2672,21 +2677,50 @@ def classificar_resumo_api(
                 detail="O texto da resposta está vazio ou excede o limite de transformação.",
             )
 
-        mensagem_alvo_db = (
-            db.query(Mensagem)
-            .filter(
-                Mensagem.conversa_id == id_conversa_uuid,
-                Mensagem.remetente == "assistant",
-                Mensagem.conteudo == resposta_alvo,
+        mensagem_alvo_db = None
+        resposta_alvo_id = (dados.resposta_alvo_id or "").strip()
+
+        if resposta_alvo_id:
+            try:
+                id_resposta_uuid = uuid.UUID(resposta_alvo_id)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="ID da resposta selecionada inválido.",
+                )
+
+            mensagem_alvo_db = (
+                db.query(Mensagem)
+                .filter(
+                    Mensagem.id == id_resposta_uuid,
+                    Mensagem.conversa_id == id_conversa_uuid,
+                    Mensagem.remetente == "assistant",
+                )
+                .first()
             )
-            .order_by(Mensagem.horario.desc())
-            .first()
-        )
+        else:
+            # Compatibilidade com clientes antigos que ainda enviam apenas o texto.
+            mensagem_alvo_db = (
+                db.query(Mensagem)
+                .filter(
+                    Mensagem.conversa_id == id_conversa_uuid,
+                    Mensagem.remetente == "assistant",
+                    Mensagem.conteudo == resposta_alvo,
+                )
+                .order_by(Mensagem.horario.desc())
+                .first()
+            )
+
         if mensagem_alvo_db is None:
             raise HTTPException(
                 status_code=404,
-                detail="A resposta selecionada não foi encontrada nesta conversa.",
+                detail="A resposta selecionada não foi encontrada nesta conversa. Atualize a página e tente novamente.",
             )
+
+        # A fonte de verdade é sempre a mensagem salva no banco, não o texto recebido do navegador.
+        resposta_alvo = mensagem_alvo_db.conteudo
+        palavras_originais = len(resposta_alvo.split())
+        limite_palavras_resumo = max(8, int(palavras_originais * 0.40))
         fontes_resposta_alvo = list(mensagem_alvo_db.fontes or [])
 
     mensagem_assistente_substituir_id = None
@@ -2751,10 +2785,6 @@ def classificar_resumo_api(
             "não os apresente como regras ou exigências oficiais. "
             "Entregue apenas o resultado final, sem explicar o que você fez."
         )
-        resposta_alvo = dados.resposta_alvo
-        palavras_originais = len(resposta_alvo.split())
-        limite_palavras_resumo = max(8, int(palavras_originais * 0.40))
-
         if acao_resposta == "summarize":
             tarefa_transformacao = (
                 "Produza um resumo substancialmente menor, com no máximo "
@@ -2801,15 +2831,25 @@ def classificar_resumo_api(
                 },
             )
 
-        resposta_transformada = gerar_texto(
-            prompt_transformacao,
-            max_tokens=(
-                min(420, max(100, int(limite_palavras_resumo * 1.8)))
-                if acao_resposta == "summarize"
-                else GROQ_MAX_CHAT_TOKENS
-            ),
-            system_prompt=system_prompt_transformacao,
-        )
+        try:
+            resposta_transformada = gerar_texto(
+                prompt_transformacao,
+                max_tokens=(
+                    min(420, max(100, int(limite_palavras_resumo * 1.8)))
+                    if acao_resposta == "summarize"
+                    else GROQ_MAX_CHAT_TOKENS
+                ),
+                system_prompt=system_prompt_transformacao,
+            )
+        except Exception as erro:
+            print(
+                "[TRANSFORMACAO][ERRO] "
+                f"acao={acao_resposta} | {type(erro).__name__}: {erro}"
+            )
+            raise HTTPException(
+                status_code=502,
+                detail="O serviço de IA não conseguiu concluir essa transformação agora. Tente novamente.",
+            )
 
         # Checagem objetiva: se a IA devolver algo maior que o limite,
         # solicita uma segunda versão mais curta antes de salvar/exibir.
@@ -2838,16 +2878,18 @@ def classificar_resumo_api(
                 system_prompt=system_prompt_transformacao,
             )
 
-        db.add(
-            Mensagem(
-                conversa_id=id_conversa_uuid,
-                remetente="assistant",
-                conteudo=resposta_transformada,
-                fontes=fontes_resposta_alvo,
-            )
+        mensagem_transformada = Mensagem(
+            conversa_id=id_conversa_uuid,
+            remetente="assistant",
+            conteudo=resposta_transformada,
+            fontes=fontes_resposta_alvo,
         )
+        db.add(mensagem_transformada)
+        db.flush()
+        id_mensagem_transformada = str(mensagem_transformada.id)
         db.commit()
         return {
+            "mensagem_id": id_mensagem_transformada,
             "conversa_id": str(id_conversa_uuid),
             "titulo": conversa.titulo,
             "resultado": resposta_transformada,
