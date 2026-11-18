@@ -302,3 +302,20 @@
 .app-main.state-chat .suggestion-carousel {
   display: none !important;
 }
+
+
+/* O carrossel só aparece depois de o primeiro cartão ser centralizado. */
+.suggestion-carousel {
+  opacity: 0;
+  transition: opacity .32s ease;
+}
+
+.suggestion-carousel.is-ready {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .suggestion-carousel {
+    transition: none;
+  }
+}
