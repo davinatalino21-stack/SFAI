@@ -1939,15 +1939,9 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
     ["simplify", "Explicar de forma mais simples"],
     ["summarize", "Criar um resumo"],
     ["expand", "Aprofundar a resposta"],
-    ["bullets", "Transformar em tópicos"],
+    ["examples", "Gerar exemplos práticos"],
     ["export", "Exportar resposta"],
   ];
-  if (
-    elemento.querySelector(".rag-fontes-dropdown") ||
-    elemento.nextElementSibling?.querySelector(".rag-fontes-dropdown")
-  ) {
-    opcoesMenu.push(["sources", "Abrir fontes consultadas"]);
-  }
   if (elemento.querySelector("pre code")) {
     opcoesMenu.push(["copy-code", "Copiar código"]);
   }
@@ -2061,18 +2055,6 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
       return;
     }
 
-    if (acao === "sources") {
-      const fontesEl =
-        elemento.querySelector(".rag-fontes-dropdown") ||
-        elemento.nextElementSibling?.querySelector(".rag-fontes-dropdown");
-      if (fontesEl) {
-        fontesEl.open = true;
-        fontesEl.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-      mais.open = false;
-      return;
-    }
-
     if (acao === "copy-code") {
       const blocos = Array.from(elemento.querySelectorAll("pre code"));
       const codigo = blocos.map((bloco) => bloco.textContent || "").join("\n\n");
@@ -2090,9 +2072,9 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
 
     const comandos = {
       simplify: "Explique a resposta anterior de forma mais simples, usando linguagem clara e exemplos quando ajudarem.",
-      summarize: "Faça um resumo da resposta anterior, preservando as informações mais importantes.",
+      summarize: "Resuma a resposta anterior de forma realmente mais curta.",
       expand: "Aprofunde a resposta anterior com mais detalhes, contexto e explicações relevantes.",
-      bullets: "Reorganize a resposta anterior em tópicos curtos e bem organizados, sem perder informações importantes.",
+      examples: "Crie exemplos práticos que ilustrem as orientações da resposta anterior.",
     };
 
     if (comandos[acao]) {
@@ -2101,7 +2083,7 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
         simplify: "Explicar de forma mais simples",
         summarize: "Criar um resumo",
         expand: "Aprofundar a resposta",
-        bullets: "Transformar em tópicos",
+        examples: "Gerar exemplos práticos",
       };
       void enviarMensagem(rotulos[acao], {
         transformacao: acao,
@@ -2252,7 +2234,8 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
         feira: regenerando ? "" : feiraMapeada,
         modo: modo,
         mensagem: userMessage,
-        stream: modo === "conversa",
+        // Transformações usam resposta JSON para validar o resultado antes de exibi-lo.
+        stream: modo === "conversa" && !transformacao,
         regenerar: regenerando,
         acao_resposta: transformacao || null,
         resposta_alvo: transformacao ? (opcoes.respostaAlvo || "") : null,
