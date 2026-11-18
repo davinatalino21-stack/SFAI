@@ -33,6 +33,7 @@ from google import genai
 from google.genai import types
 from groq import Groq, RateLimitError
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text as texto_sql
 from database import SessionLocal
 from models import Usuario, Conversa, Mensagem
@@ -1969,6 +1970,10 @@ class RequisicaoGoogle(BaseModel):
     credential: str
 
 
+class RequisicaoSessaoAnonima(BaseModel):
+    guest_key: str | None = None
+
+
 def validar_imagem_data_url(data_url: str) -> dict:
     """Valida uma imagem base64 sem gravá-la no disco ou no banco."""
     if not isinstance(data_url, str):
@@ -3117,6 +3122,65 @@ def classificar_resumo_api(
 # ============================================================
 # ROTAS DE AUTENTICAÇÃO
 # ============================================================
+
+@app.post("/sessao-anonima")
+def criar_sessao_anonima(
+    dados: RequisicaoSessaoAnonima,
+    db: Session = Depends(get_db),
+):
+    """
+    Cria ou recupera uma identidade anônima por navegador.
+    O identificador é uma credencial aleatória guardada no localStorage;
+    ele nunca é compartilhado entre visitantes e permite renovar o JWT.
+    """
+    guest_key = (dados.guest_key or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{32,120}", guest_key):
+        guest_key = secrets.token_urlsafe(48)
+
+    identidade_anonima = f"guest:{guest_key}"
+    usuario = (
+        db.query(Usuario)
+        .filter(Usuario.google_id == identidade_anonima)
+        .first()
+    )
+
+    if usuario is None:
+        usuario = Usuario(
+            nome="Visitante",
+            email=f"visitante-{uuid.uuid4().hex}@anonimo.sfai.local",
+            google_id=identidade_anonima,
+        )
+        db.add(usuario)
+        try:
+            db.commit()
+            db.refresh(usuario)
+        except IntegrityError:
+            # Duas abas podem tentar iniciar a mesma sessão ao mesmo tempo.
+            db.rollback()
+            usuario = (
+                db.query(Usuario)
+                .filter(Usuario.google_id == identidade_anonima)
+                .first()
+            )
+            if usuario is None:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Não foi possível iniciar uma sessão anônima agora.",
+                )
+
+    return {
+        "sucesso": True,
+        "tipo_sessao": "anonima",
+        "guest_key": guest_key,
+        "token": criar_token(usuario.id),
+        "usuario": {
+            "id": usuario.id,
+            "nome": "Visitante",
+            "email": "Sessão sem cadastro",
+            "anonimo": True,
+        },
+    }
+
 
 @app.post("/cadastro")
 def cadastrar_usuario(dados: RequisicaoCadastro):
