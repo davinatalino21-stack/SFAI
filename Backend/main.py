@@ -2872,11 +2872,21 @@ def classificar_resumo_api(
                 f"{texto_json}\n\n"
                 "Responda somente com o resumo final."
             )
-            resposta_transformada = gerar_texto(
-                prompt_resumo_corretivo,
-                max_tokens=min(420, max(100, int(limite_palavras_resumo * 1.8))),
-                system_prompt=system_prompt_transformacao,
-            )
+            try:
+                resposta_transformada = gerar_texto(
+                    prompt_resumo_corretivo,
+                    max_tokens=min(420, max(100, int(limite_palavras_resumo * 1.8))),
+                    system_prompt=system_prompt_transformacao,
+                )
+            except Exception as erro:
+                print(
+                    "[TRANSFORMACAO][ERRO] Falha na segunda tentativa do resumo | "
+                    f"{type(erro).__name__}: {erro}"
+                )
+                raise HTTPException(
+                    status_code=502,
+                    detail="Não foi possível concluir o resumo agora. Tente novamente.",
+                )
 
         mensagem_transformada = Mensagem(
             conversa_id=id_conversa_uuid,
