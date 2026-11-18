@@ -1661,6 +1661,9 @@ function novaConversa() {
 
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
+        // O carrossel estava em display:none durante a conversa. Recalcula
+        // sua posição somente depois que o layout inicial voltou a existir.
+        window.SFAISuggestionCarousel?.reset?.();
         appMain.classList.remove("chat-transition-in");
         novaConversaEmAndamento = false;
       });
@@ -2455,6 +2458,7 @@ function fecharPainéis() {
 function atualizarBackdrop() {
   const backdrop = document.getElementById("drawerBackdrop");
   const aberto = document.querySelectorAll(".drawer.is-open").length > 0;
+  document.querySelector(".app")?.classList.toggle("panels-open", aberto);
   if (backdrop) {
     backdrop.classList.toggle("is-visible", aberto);
     backdrop.tabIndex = aberto ? 0 : -1;
