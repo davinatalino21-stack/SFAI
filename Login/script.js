@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const API_BASE_URL = "https://davidumbproxmax-classificador-mostratec.hf.space";
 
   if (localStorage.getItem("token")) {
-    window.location.href = "../Layout.html";
+    window.location.href = "../index.html";
   }
 
   const corpoDoLogin = document.querySelector(".corpo-do-login");
@@ -175,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("usuario", JSON.stringify(data.usuario));
-      window.location.href = "../Layout.html";
+      window.location.href = "../index.html";
     } catch (error) {
       const errorElement = document.querySelector(
         `[data-error-for="loginEmail"]`,
@@ -279,7 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("usuario", JSON.stringify(data.usuario));
-      window.location.href = "../Layout.html";
+      window.location.href = "../index.html";
     } catch (error) {
       const errorElement = document.querySelector(
         `[data-error-for="${form.querySelector("input").id}"]`,
