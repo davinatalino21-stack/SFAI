@@ -5,14 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0a1628" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f6f9fc" media="(prefers-color-scheme: light)" />
-    <title>SFAI | Saiba mais</title>
+    <meta name="description" content="Documentação completa do SFAI: como usar o chatbot, classificar projetos, consultar fontes, anexar imagens e entender a tecnologia do sistema." />
+    <title>Documentação | SFAI</title>
     <link rel="icon" type="image/png" href="img/favicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <script src="Theme/theme.js" defer></script>
     <script src="Theme/ui.js" defer></script>
     <link rel="stylesheet" href="Theme/theme.css" />
@@ -20,74 +18,417 @@
     <link rel="stylesheet" href="FrontEnd/KnowMore/knowMore.css" />
     <script src="FrontEnd/KnowMore/knowmore.js" defer></script>
   </head>
+  <body class="docs-body">
+    <header class="docs-header">
+      <a class="docs-brand" href="Layout.html" aria-label="SFAI - página inicial">SF<span>AI</span></a>
+      <nav class="docs-header-nav" aria-label="Navegação da documentação">
+        <a href="#visao-geral">Visão geral</a>
+        <a href="#recursos">Recursos</a>
+        <a href="#tecnologia">Tecnologia</a>
+        <a class="btn btn-primary" href="index.html">Abrir chatbot</a>
+      </nav>
+    </header>
 
-  <body class="about-body">
-    <main class="about-page">
-      <div class="about-hero">
-        <img
-          src="img/SFAI_BOT_KNOWMORE.png"
-          alt="Ilustração do assistente SFAI respondendo dúvidas sobre feiras de ciências"
-          loading="lazy"
-          width="640"
-          height="400"
-        />
-        <div class="about-hero-text">
-          <span class="chip">Conheça o SFAI</span>
-          <h1>Sua pesquisa inteligente</h1>
-          <p>
-            O SFAI é uma inteligência artificial especializada em grandes feiras
-            de ciências, como a Mostratec e a FEBRACE. Nossa missão é simplificar
-            sua jornada científica, respondendo dúvidas que vão desde a
-            identificação de finalistas e análise de resumos até a classificação
-            correta de temas em suas respectivas áreas de conhecimento. Com o
-            SFAI, você tem um mentor digital disponível 24h para garantir que seu
-            projeto siga os mais altos padrões científicos.
+    <main class="docs-shell">
+      <section class="docs-hero" id="topo">
+        <div class="docs-hero-copy">
+          <span class="chip">Central de documentação</span>
+          <p class="docs-eyebrow">SFAI · Assistente para feiras de ciências</p>
+          <h1>Conheça o SFAI por completo.</h1>
+          <p class="docs-lead">
+            Este guia explica o que o sistema faz, como utilizar cada recurso,
+            de onde vêm as respostas, como os dados são tratados e como a
+            aplicação é organizada tecnicamente.
           </p>
+          <div class="docs-hero-actions">
+            <a class="btn btn-primary" href="index.html">Começar sem cadastro</a>
+            <a class="btn btn-ghost" href="#como-usar">Aprender a usar</a>
+          </div>
+          <p class="docs-updated">Documentação funcional · Revisada em novembro de 2026</p>
         </div>
-      </div>
-
-      <section class="about-section">
-        <h2>O que você pode perguntar?</h2>
-        <ul class="about-list">
-          <li>
-            <span class="about-bullet">1</span>
-            <span>Quais foram os projetos premiados em Engenharia na Mostratec 2023?</span>
-          </li>
-          <li>
-            <span class="about-bullet">2</span>
-            <span>Como estruturar meu resumo para as normas da FEBRACE</span>
-          </li>
-          <li>
-            <span class="about-bullet">3</span>
-            <span>Meu tema de pesquisa se encaixa em Ciências Sociais ou Humanas?</span>
-          </li>
-        </ul>
+        <aside class="docs-hero-aside">
+          <div class="docs-aside-mark">S</div>
+          <h2>Da ideia à apresentação científica</h2>
+          <p>Um único espaço para tirar dúvidas, consultar referências e obter apoio na classificação de projetos.</p>
+          <div class="docs-aside-points">
+            <span><i></i> Conversa sobre feiras de ciências</span>
+            <span><i></i> Classificação assistida de resumos</span>
+            <span><i></i> Pesquisa em documentos e na web</span>
+          </div>
+        </aside>
       </section>
 
-      <section class="about-section">
-        <h2>Como o SFAI simplifica sua pesquisa</h2>
-        <div class="benefitsContainer">
-          <div class="benefit-card firstBenefit">
-            <h4>Base de Dados Real</h4>
-            <p>Treinada com editais, resumos e históricos oficiais.</p>
-          </div>
-          <div class="benefit-card secondBenefit">
-            <h4>Respostas Personalizadas</h4>
-            <p>Orientações específicas para seu projeto e área de interesse.</p>
-          </div>
-          <div class="benefit-card thirdBenefit">
-            <h4>Disponível 24/7</h4>
-            <p>Suporte contínuo para todas as etapas do seu projeto.</p>
-          </div>
-        </div>
-      </section>
+      <div class="docs-layout">
+        <aside class="docs-sidebar" aria-label="Índice da documentação">
+          <div class="docs-sidebar-title">Nesta documentação</div>
+          <nav class="docs-toc">
+            <a href="#visao-geral">1. Visão geral</a>
+            <a href="#como-usar">2. Primeiros passos</a>
+            <a href="#recursos">3. Recursos do chatbot</a>
+            <a href="#classificacao">4. Classificação de projetos</a>
+            <a href="#imagens">5. Envio de imagens</a>
+            <a href="#fontes">6. Fontes, RAG e pesquisa web</a>
+            <a href="#historico">7. Conversas e histórico</a>
+            <a href="#acesso">8. Acesso anônimo e contas</a>
+            <a href="#tecnologia">9. Arquitetura e tecnologias</a>
+            <a href="#api">10. API e rotas</a>
+            <a href="#estrutura">11. Estrutura do repositório</a>
+            <a href="#configuracao">12. Configuração e implantação</a>
+            <a href="#privacidade">13. Dados e segurança</a>
+            <a href="#limites">14. Limitações conhecidas</a>
+            <a href="#solucao">15. Solução de problemas</a>
+            <a href="#glossario">16. Glossário e dúvidas</a>
+          </nav>
+          <a class="docs-sidebar-home" href="Layout.html">← Voltar à página inicial</a>
+        </aside>
 
-      <div class="about-actions">
-        <button class="btn btn-primary" onclick="window.location.href = 'index.html'">
-          Comece Agora
-        </button>
-        <a href="javascript:void(0)" class="btn btn-ghost" onclick="displayMessage()">Voltar</a>
+        <article class="docs-content">
+          <section class="docs-section" id="visao-geral">
+            <p class="docs-kicker">01 · Sobre o projeto</p>
+            <h2>O que é o SFAI?</h2>
+            <p>
+              O <strong>SFAI</strong> é um assistente de inteligência artificial
+              desenvolvido para apoiar estudantes e orientadores durante a
+              preparação de projetos para feiras de ciências. Ele reúne
+              conversação, consulta a documentos, pesquisa na internet e
+              classificação assistida de resumos em uma interface web.
+            </p>
+            <p>
+              O sistema foi construído para ajudar a compreender regulamentos,
+              explorar edições anteriores, organizar ideias, melhorar a
+              apresentação de uma pesquisa e identificar categorias científicas
+              compatíveis com um projeto. O SFAI funciona como ferramenta de
+              apoio: a decisão final deve sempre considerar os editais e as
+              orientações oficiais de cada feira.
+            </p>
+            <div class="docs-note docs-note-info">
+              <strong>Importante</strong>
+              <p>O SFAI não representa as organizações das feiras e não substitui seus editais, comissões avaliadoras, orientadores ou fontes oficiais.</p>
+            </div>
+            <div class="docs-stat-grid">
+              <div><strong>2</strong><span>classificadores específicos, para FEBRACE e MOSTRATEC</span></div>
+              <div><strong>3</strong><span>imagens no máximo por mensagem</span></div>
+              <div><strong>1</strong><span>interface para conversa, pesquisa e classificação</span></div>
+            </div>
+          </section>
+
+          <section class="docs-section" id="como-usar">
+            <p class="docs-kicker">02 · Primeiros passos</p>
+            <h2>Como começar a usar</h2>
+            <p>O chatbot pode ser aberto diretamente. Não é necessário criar uma conta nem preencher um formulário antes de enviar a primeira pergunta.</p>
+            <ol class="docs-steps">
+              <li><span>01</span><div><strong>Abra o chatbot</strong><p>Na página inicial, selecione “Usar sem cadastro” ou acesse o chatbot pelo botão desta documentação.</p></div></li>
+              <li><span>02</span><div><strong>Digite sua pergunta</strong><p>Escreva no campo inferior. Você pode perguntar sobre uma feira, uma etapa do projeto ou um conceito científico.</p></div></li>
+              <li><span>03</span><div><strong>Escolha uma feira quando necessário</strong><p>Use o botão “+” ao lado do campo de mensagem para selecionar uma feira e entrar no modo de classificação.</p></div></li>
+              <li><span>04</span><div><strong>Confira a resposta e as referências</strong><p>Quando houver fontes disponíveis, abra o painel de referências para consultar os documentos ou sites utilizados.</p></div></li>
+            </ol>
+            <p>Também é possível iniciar a conversa por meio dos cartões de sugestão ou das perguntas frequentes na barra lateral.</p>
+          </section>
+
+          <section class="docs-section" id="recursos">
+            <p class="docs-kicker">03 · Funcionalidades</p>
+            <h2>Recursos disponíveis</h2>
+            <div class="docs-feature-grid">
+              <article class="docs-feature-card"><span class="docs-feature-index">A</span><h3>Chat de perguntas e respostas</h3><p>Converse sobre feiras, regulamentos, projetos, metodologia, escrita científica, cronogramas e assuntos relacionados à pesquisa.</p></article>
+              <article class="docs-feature-card"><span class="docs-feature-index">B</span><h3>Classificação assistida</h3><p>Envie um resumo e selecione FEBRACE ou MOSTRATEC para receber uma categoria principal e alternativas compatíveis.</p></article>
+              <article class="docs-feature-card"><span class="docs-feature-index">C</span><h3>Pesquisa em fontes</h3><p>O sistema pode recuperar trechos de documentos indexados e realizar buscas externas quando a pergunta exigir informações atuais ou específicas.</p></article>
+              <article class="docs-feature-card"><span class="docs-feature-index">D</span><h3>Compreensão de imagens</h3><p>Anexe fotografias, capturas de tela, gráficos ou esquemas para que o conteúdo visual seja analisado junto da sua pergunta.</p></article>
+              <article class="docs-feature-card"><span class="docs-feature-index">E</span><h3>Respostas em fluxo</h3><p>No modo de conversa, o texto pode ser apresentado progressivamente, sem precisar esperar a resposta inteira para começar a ler.</p></article>
+              <article class="docs-feature-card"><span class="docs-feature-index">F</span><h3>Ferramentas de resposta</h3><p>As respostas podem oferecer ações para simplificar, resumir, aprofundar, reorganizar em tópicos ou regenerar a resposta mais recente.</p></article>
+            </div>
+            <h3 class="docs-subheading">Áreas em que o assistente pode ajudar</h3>
+            <div class="docs-tag-list">
+              <span>Regulamentos e editais</span><span>Metodologia científica</span><span>Resumo e introdução</span><span>Problema de pesquisa</span><span>Objetivos e justificativa</span><span>Áreas e categorias</span><span>Planejamento do projeto</span><span>Feiras e cronogramas</span>
+            </div>
+          </section>
+
+          <section class="docs-section" id="classificacao">
+            <p class="docs-kicker">04 · Classificador</p>
+            <h2>Classificação de projetos científicos</h2>
+            <p>O modo de classificação foi desenvolvido para comparar o conteúdo de um resumo com as categorias disponíveis nas feiras atendidas pelo sistema.</p>
+            <h3 class="docs-subheading">Como fazer uma classificação</h3>
+            <ol class="docs-numbered-list">
+              <li>Abra o menu “+” no campo de mensagem.</li>
+              <li>Selecione FEBRACE ou MOSTRATEC. As opções “Ciências para Todos” e “12ª DIREC” também são direcionadas ao classificador FEBRACE na implementação atual.</li>
+              <li>Envie o resumo do projeto. Você também pode incluir imagens relacionadas ao trabalho.</li>
+              <li>Leia a categoria principal, as alternativas e a justificativa gerada para o enquadramento.</li>
+            </ol>
+            <div class="docs-note docs-note-warning">
+              <strong>Como interpretar o resultado</strong>
+              <p>A classificação é uma recomendação automatizada, não uma aprovação oficial. Categorias parecidas podem depender de detalhes do método, dos objetivos e das regras específicas da edição da feira. Compare sempre o resultado com o regulamento vigente.</p>
+            </div>
+            <h3 class="docs-subheading">Etapas internas da classificação</h3>
+            <div class="docs-flow">
+              <div><b>1</b><span>Texto do resumo</span></div><i>→</i>
+              <div><b>2</b><span>Modelo específico da feira</span></div><i>→</i>
+              <div><b>3</b><span>Principais categorias previstas</span></div><i>→</i>
+              <div><b>4</b><span>Justificativa em linguagem natural</span></div>
+            </div>
+            <p>Os classificadores são armazenados no Hugging Face Hub e selecionados conforme a feira escolhida. A resposta final combina as categorias previstas pelo modelo com uma explicação textual produzida pelo backend.</p>
+          </section>
+
+          <section class="docs-section" id="imagens">
+            <p class="docs-kicker">05 · Visão computacional</p>
+            <h2>Envio e análise de imagens</h2>
+            <p>O usuário pode anexar imagens pelo botão de clipe ou colar uma imagem copiada diretamente no campo de mensagem usando Ctrl + V. Em dispositivos compatíveis, também é possível usar as opções de colar do teclado ou do menu de contexto.</p>
+            <div class="docs-table-wrap">
+              <table class="docs-table">
+                <tbody>
+                  <tr><th>Formatos aceitos</th><td>JPEG, PNG e WebP</td></tr>
+                  <tr><th>Quantidade por mensagem</th><td>Até 3 imagens</td></tr>
+                  <tr><th>Tamanho por imagem</th><td>Até 10 MB</td></tr>
+                  <tr><th>Tamanho total dos anexos</th><td>Até 14 MB</td></tr>
+                  <tr><th>Finalidade</th><td>Extrair contexto visual para o modelo principal usar na resposta ou classificação</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>O módulo visual descreve elementos, textos legíveis, números, relações espaciais e detalhes relevantes. A descrição é incorporada à mensagem como contexto auxiliar.</p>
+            <div class="docs-note docs-note-info">
+              <strong>Armazenamento das imagens</strong>
+              <p>O backend não grava os arquivos de imagem originais no histórico do banco de dados. Ele salva a mensagem e a descrição textual gerada pela análise visual. As miniaturas exibidas durante a conversa ficam no navegador.</p>
+            </div>
+            <p>O texto presente em uma imagem é tratado como conteúdo a ser analisado, não como instrução para o assistente. Ainda assim, evite anexar documentos com informações pessoais, senhas ou dados confidenciais.</p>
+          </section>
+
+          <section class="docs-section" id="fontes">
+            <p class="docs-kicker">06 · Recuperação de informação</p>
+            <h2>Documentos, RAG e pesquisa na internet</h2>
+            <h3 class="docs-subheading">Consulta à base documental</h3>
+            <p>O SFAI possui um mecanismo de recuperação aumentada por geração, conhecido como RAG. Em vez de depender apenas do conhecimento geral do modelo, o backend pode pesquisar trechos relevantes em documentos que foram processados e adicionados ao índice local.</p>
+            <p>Os documentos são divididos em trechos menores, convertidos em representações vetoriais e recuperados por similaridade quando a pergunta é compatível com o conteúdo indexado. Os trechos selecionados são enviados como contexto para a geração da resposta.</p>
+            <h3 class="docs-subheading">Pesquisa externa</h3>
+            <p>Quando a pergunta envolve informações atuais, datas, prazos ou assuntos que precisam de verificação adicional, o backend pode acionar uma pesquisa na web pelo serviço Tavily. A resposta pode incluir referências a páginas externas.</p>
+            <h3 class="docs-subheading">Como ler as referências</h3>
+            <p>As citações numéricas no texto podem abrir a fonte correspondente. O painel “Fontes desta resposta” reúne documentos PDF e sites consultados. Abra os links para conferir o contexto completo e verificar se a informação continua válida.</p>
+            <div class="docs-note docs-note-warning">
+              <strong>Atualidade e confiabilidade</strong>
+              <p>Uma fonte indexada pode pertencer a uma edição antiga. Para inscrições, cronogramas, prazos e regulamentos, priorize a página oficial e confirme o ano da edição. A ausência de uma fonte exibida não significa que a resposta foi verificada externamente.</p>
+            </div>
+          </section>
+
+          <section class="docs-section" id="historico">
+            <p class="docs-kicker">07 · Organização</p>
+            <h2>Conversas e histórico</h2>
+            <p>O painel “Histórico” lista as conversas disponíveis para a identidade atual. Selecione uma conversa para recuperar suas mensagens e continuar o assunto. O botão “Nova conversa” inicia um novo contexto.</p>
+            <ul class="docs-bullet-list">
+              <li>As conversas são identificadas por um ID próprio e associadas ao usuário ou à sessão anônima que as criou.</li>
+              <li>O backend salva as mensagens e as referências retornadas junto da conversa.</li>
+              <li>O modelo recebe uma seleção limitada de mensagens anteriores como contexto, para controlar o tamanho do histórico enviado a cada solicitação.</li>
+              <li>A opção “Salvar histórico automaticamente” também controla a cópia local da conversa neste navegador.</li>
+              <li>As ações de regenerar e transformar respostas dependem de uma conversa existente e de uma resposta que pertença àquela conversa.</li>
+            </ul>
+            <p>Se a opção de salvamento automático estiver desativada, a cópia local deixa de ser atualizada; isso não altera o fato de que as mensagens enviadas ao backend são registradas no histórico da conversa no banco de dados.</p>
+          </section>
+
+          <section class="docs-section" id="acesso">
+            <p class="docs-kicker">08 · Autenticação opcional</p>
+            <h2>Acesso anônimo e contas</h2>
+            <p>O chatbot está disponível sem exigir login. Na primeira abertura, o navegador solicita uma sessão anônima ao backend. O sistema cria uma identidade de visitante e entrega um token temporário para que as rotas de conversa continuem identificando o dono do histórico.</p>
+            <div class="docs-compare">
+              <article><span class="docs-compare-label">Visitante</span><h3>Sem cadastro</h3><ul><li>Entra diretamente no chatbot.</li><li>Recebe uma identidade exclusiva para aquele navegador.</li><li>Pode conversar, classificar projetos, enviar imagens e consultar o histórico daquela sessão.</li><li>A chave da sessão fica no armazenamento local do navegador.</li></ul></article>
+              <article><span class="docs-compare-label">Conta SFAI</span><h3>Login opcional</h3><ul><li>Pode entrar com e-mail e senha ou Google.</li><li>Tem perfil e configurações da conta.</li><li>O histórico é associado ao ID da conta autenticada.</li><li>Permite acessar os recursos de conta disponíveis nas páginas de perfil e configurações.</li></ul></article>
+            </div>
+            <h3 class="docs-subheading">Limites importantes da sessão anônima</h3>
+            <p>A sessão anônima é vinculada à chave guardada no navegador. Ela pode ser renovada automaticamente quando o token expira, desde que a chave continue disponível. Limpar os dados do site, trocar de navegador ou de dispositivo pode impedir o acesso ao histórico anônimo anterior.</p>
+            <p>As conversas anônimas não são transferidas automaticamente para uma conta criada posteriormente. Para utilizar uma conta, abra o menu de visitante e escolha “Entrar ou criar conta”.</p>
+          </section>
+
+          <section class="docs-section" id="tecnologia">
+            <p class="docs-kicker">09 · Arquitetura</p>
+            <h2>Como o SFAI funciona por dentro</h2>
+            <p>A aplicação é dividida em uma interface web, uma API responsável pela lógica do assistente e serviços especializados usados durante a geração das respostas.</p>
+            <div class="docs-architecture">
+              <div class="docs-arch-node docs-arch-client"><b>01 · Interface web</b><span>HTML, CSS e JavaScript</span><small>Hospedagem estática no Netlify</small></div>
+              <div class="docs-arch-connector">requisições HTTPS / JSON / SSE</div>
+              <div class="docs-arch-node docs-arch-api"><b>02 · Backend SFAI</b><span>FastAPI + Python</span><small>API implantada em um Hugging Face Space</small></div>
+              <div class="docs-arch-branches">
+                <div class="docs-arch-node"><b>Banco de dados</b><span>PostgreSQL + SQLAlchemy</span><small>Contas, conversas e mensagens</small></div>
+                <div class="docs-arch-node"><b>Modelos de IA</b><span>Groq + modelos do Hugging Face</span><small>Chat, visão e classificação</small></div>
+                <div class="docs-arch-node"><b>Conhecimento</b><span>Gemini Embeddings + índice RAG</span><small>Recuperação de documentos</small></div>
+                <div class="docs-arch-node"><b>Pesquisa web</b><span>Tavily</span><small>Busca externa quando necessária</small></div>
+              </div>
+            </div>
+            <h3 class="docs-subheading">Fluxo de uma mensagem</h3>
+            <ol class="docs-numbered-list">
+              <li>O navegador envia o texto, o modo selecionado, o ID da conversa e, quando aplicável, os anexos.</li>
+              <li>A API valida a sessão, verifica os dados de entrada e recupera o histórico da conversa.</li>
+              <li>O backend decide se precisa consultar documentos, pesquisar na web ou executar uma classificação.</li>
+              <li>O modelo gera a resposta. No modo de conversa, o backend pode transmiti-la progressivamente usando Server-Sent Events.</li>
+              <li>A resposta e suas fontes são armazenadas no histórico e devolvidas à interface.</li>
+            </ol>
+          </section>
+
+          <section class="docs-section" id="modelos">
+            <p class="docs-kicker">09.1 · Componentes de IA</p>
+            <h2>Modelos e serviços utilizados</h2>
+            <div class="docs-table-wrap">
+              <table class="docs-table">
+                <thead><tr><th>Componente</th><th>Função no SFAI</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>openai/gpt-oss-120b</strong></td><td>Modelo principal de conversação e geração textual pelo serviço Groq.</td></tr>
+                  <tr><td><strong>Qwen via Groq</strong></td><td>Módulo visual que descreve imagens antes de a informação ser enviada ao modelo principal. O nome pode ser alterado pela variável GROQ_VISION_MODEL.</td></tr>
+                  <tr><td><strong>MostratecTypeAI</strong></td><td>Classificador específico para categorias da MOSTRATEC, hospedado no Hugging Face Hub.</td></tr>
+                  <tr><td><strong>FebraceTypeAI</strong></td><td>Classificador específico para categorias da FEBRACE, hospedado no Hugging Face Hub.</td></tr>
+                  <tr><td><strong>gemini-embedding-001</strong></td><td>Modelo de embeddings usado na representação vetorial de documentos para recuperação RAG.</td></tr>
+                  <tr><td><strong>Tavily Search</strong></td><td>Serviço de pesquisa na web acionado pelo backend quando a consulta precisa de fontes externas.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>Os nomes e os fornecedores descrevem a implementação do repositório. Modelos, cotas, versões e disponibilidade dos serviços externos podem mudar independentemente do código do site.</p>
+          </section>
+
+          <section class="docs-section" id="api">
+            <p class="docs-kicker">10 · Integração</p>
+            <h2>Rotas principais da API</h2>
+            <p>A interface se comunica com o backend FastAPI. As rotas abaixo representam os endpoints funcionais presentes na implementação atual.</p>
+            <div class="docs-table-wrap">
+              <table class="docs-table docs-api-table">
+                <thead><tr><th>Método</th><th>Rota</th><th>Finalidade</th><th>Acesso</th></tr></thead>
+                <tbody>
+                  <tr><td><code>POST</code></td><td><code>/sessao-anonima</code></td><td>Cria ou recupera uma identidade de visitante e emite um JWT.</td><td>Público</td></tr>
+                  <tr><td><code>POST</code></td><td><code>/classificar</code></td><td>Executa conversa, classificação, regeneração ou transformação de resposta.</td><td>JWT</td></tr>
+                  <tr><td><code>GET</code></td><td><code>/conversas/{usuario_id}</code></td><td>Lista as conversas do usuário autenticado.</td><td>JWT do mesmo usuário</td></tr>
+                  <tr><td><code>GET</code></td><td><code>/conversas/{conversa_id}/mensagens</code></td><td>Recupera as mensagens de uma conversa pertencente à sessão.</td><td>JWT do proprietário</td></tr>
+                  <tr><td><code>DELETE</code></td><td><code>/conversas?usuario_id=ID</code></td><td>Apaga as conversas do usuário autenticado.</td><td>JWT do mesmo usuário</td></tr>
+                  <tr><td><code>GET</code></td><td><code>/rag/status</code></td><td>Retorna informações básicas sobre o índice RAG carregado.</td><td>Público</td></tr>
+                  <tr><td><code>GET</code></td><td><code>/documentos/{nome_arquivo}</code></td><td>Entrega um documento permitido da base documental.</td><td>Público</td></tr>
+                  <tr><td><code>POST</code></td><td><code>/rag/reindexar</code></td><td>Reconstrói o índice da base documental.</td><td>Token administrativo</td></tr>
+                  <tr><td><code>POST</code></td><td><code>/cadastro</code></td><td>Cria uma conta com e-mail e senha.</td><td>Público</td></tr>
+                  <tr><td><code>POST</code></td><td><code>/login</code></td><td>Autentica uma conta com e-mail e senha.</td><td>Público</td></tr>
+                  <tr><td><code>POST</code></td><td><code>/login/google</code></td><td>Valida a credencial do Google e autentica a conta.</td><td>Público</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>As rotas de conversa exigem o cabeçalho <code>Authorization: Bearer TOKEN</code>. O visitante recebe esse token automaticamente; a interface não exige que a pessoa faça login manualmente.</p>
+            <p>Para conversas em fluxo, o frontend solicita <code>stream: true</code> e interpreta o retorno como Server-Sent Events. Classificações e outras operações retornam um objeto JSON comum.</p>
+          </section>
+
+          <section class="docs-section" id="estrutura">
+            <p class="docs-kicker">11 · Código-fonte</p>
+            <h2>Estrutura do repositório</h2>
+            <p>O repositório organiza a interface, o backend e os módulos de autenticação em diretórios separados.</p>
+            <pre class="docs-code"><code>SFAI/
+├── index.html                 # Interface principal do chatbot
+├── Layout.html                # Página inicial/apresentação
+├── knowMore.html              # Documentação do projeto
+├── profile.html               # Página de perfil
+├── settings.html              # Preferências do usuário
+├── Backend/
+│   ├── main.py                # API, chat, classificação e RAG
+│   ├── models.py              # Modelos SQLAlchemy
+│   ├── database.py            # Conexão e sessões do banco
+│   ├── auth.py                # Geração e validação de JWT
+│   ├── google_auth.py         # Login com Google
+│   ├── fair_context.py        # Contexto e identificação de feiras
+│   └── tests/                 # Testes automatizados
+├── FrontEnd/
+│   ├── chatbot/               # Lógica e estilos do chat
+│   ├── Layout/                # Estilos da página inicial
+│   └── KnowMore/              # Estilos e scripts da documentação
+├── Login/                     # Tela e lógica de autenticação
+├── Profile/                   # Estilos e scripts do perfil
+├── Settings/                  # Preferências e configurações
+├── Theme/                     # Tema, conta, preferências e componentes visuais
+├── Prompts/                   # Versões dos prompts do projeto
+└── netlify/                   # Funções auxiliares de hospedagem</code></pre>
+            <p>Os nomes acima correspondem aos módulos principais. Arquivos auxiliares, imagens, índices e artefatos podem existir em pastas adicionais.</p>
+          </section>
+
+          <section class="docs-section" id="configuracao">
+            <p class="docs-kicker">12 · Operação</p>
+            <h2>Configuração e implantação</h2>
+            <h3 class="docs-subheading">Variáveis de ambiente importantes</h3>
+            <div class="docs-table-wrap">
+              <table class="docs-table">
+                <thead><tr><th>Variável</th><th>Uso</th></tr></thead>
+                <tbody>
+                  <tr><td><code>DATABASE_URL</code></td><td>URL de conexão do banco PostgreSQL.</td></tr>
+                  <tr><td><code>JWT_SECRET</code></td><td>Chave de assinatura dos tokens JWT. Deve conter pelo menos 32 caracteres.</td></tr>
+                  <tr><td><code>GROQ_API_KEY</code></td><td>Acesso aos modelos de geração e visão disponibilizados pela Groq.</td></tr>
+                  <tr><td><code>GEMINI_API_KEY</code></td><td>Acesso aos recursos Gemini utilizados na vetorização de documentos.</td></tr>
+                  <tr><td><code>HF_TOKEN</code></td><td>Acesso aos modelos privados hospedados no Hugging Face Hub.</td></tr>
+                  <tr><td><code>TAVILY_API_KEY</code></td><td>Habilita a pesquisa externa na web.</td></tr>
+                  <tr><td><code>ADMIN_TOKEN</code></td><td>Protege a rota administrativa de reindexação do RAG.</td></tr>
+                  <tr><td><code>RAG_DOCUMENTS_DIR</code> e <code>RAG_INDEX_DIR</code></td><td>Definem diretórios dos documentos e do índice local, conforme a configuração da implantação.</td></tr>
+                  <tr><td><code>GROQ_VISION_MODEL</code></td><td>Permite definir o identificador do modelo visual.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="docs-note docs-note-warning">
+              <strong>Nunca coloque chaves no frontend</strong>
+              <p>As variáveis acima devem ser configuradas como Secrets ou variáveis privadas no ambiente do backend. Não adicione tokens, senhas ou chaves de API a arquivos HTML, JavaScript público ou ao histórico do Git.</p>
+            </div>
+            <h3 class="docs-subheading">Ambientes de hospedagem</h3>
+            <p>O frontend é composto por arquivos estáticos e pode ser publicado em um serviço como o Netlify. O backend Python é executado separadamente, atualmente preparado para o ambiente do Hugging Face Spaces. O banco PostgreSQL é acessado pelo backend, sem expor as credenciais ao navegador.</p>
+            <p>Após atualizar o repositório, confira os logs do frontend e do backend e teste as rotas de sessão, conversa, classificação, histórico e imagens no ambiente publicado.</p>
+          </section>
+
+          <section class="docs-section" id="privacidade">
+            <p class="docs-kicker">13 · Proteção de dados</p>
+            <h2>Dados, privacidade e segurança</h2>
+            <ul class="docs-bullet-list">
+              <li><strong>Identificação:</strong> contas utilizam seu ID interno; visitantes utilizam uma chave aleatória guardada no navegador.</li>
+              <li><strong>Autenticação:</strong> as rotas de conversa validam tokens JWT e verificam se o usuário é proprietário da conversa solicitada.</li>
+              <li><strong>Separação:</strong> cada sessão anônima possui um registro distinto, evitando que visitantes diferentes compartilhem o mesmo histórico.</li>
+              <li><strong>Histórico:</strong> mensagens e respostas são persistidas no banco para que a conversa possa ser recuperada.</li>
+              <li><strong>Imagens:</strong> os arquivos originais não são persistidos no banco; a descrição textual da análise visual pode ser armazenada junto da mensagem.</li>
+              <li><strong>Serviços externos:</strong> trechos das solicitações podem ser enviados aos provedores de IA, embeddings e pesquisa necessários para processar a pergunta.</li>
+            </ul>
+            <p>A sessão anônima não equivale a uma conta com recuperação de acesso. Ela depende da chave local do navegador. Não compartilhe essa chave nem use o computador de outra pessoa para guardar conversas privadas.</p>
+            <p>Não envie senhas, documentos pessoais, dados de saúde, informações financeiras ou conteúdo confidencial de terceiros. Para pesquisas ainda não publicadas, compartilhe apenas o conteúdo necessário para receber orientação.</p>
+          </section>
+
+          <section class="docs-section" id="limites">
+            <p class="docs-kicker">14 · Uso responsável</p>
+            <h2>Limitações conhecidas</h2>
+            <ul class="docs-bullet-list">
+              <li>Respostas de IA podem conter erros, omissões, interpretações incorretas ou referências que precisam ser verificadas.</li>
+              <li>O RAG só consegue recuperar documentos que estejam disponíveis e processados no índice carregado.</li>
+              <li>Datas e regulamentos podem mudar; a informação de uma edição anterior não deve ser assumida como válida para a edição atual.</li>
+              <li>A classificação depende da qualidade e do nível de detalhe do resumo enviado.</li>
+              <li>O módulo visual pode interpretar incorretamente textos pequenos, imagens borradas, gráficos complexos ou elementos parcialmente ocultos.</li>
+              <li>Limites de uso, indisponibilidade ou mudanças nos provedores externos podem afetar a velocidade e a disponibilidade das respostas.</li>
+              <li>O histórico anônimo não é sincronizado entre navegadores ou dispositivos e não é migrado automaticamente para uma conta.</li>
+            </ul>
+          </section>
+
+          <section class="docs-section" id="solucao">
+            <p class="docs-kicker">15 · Ajuda</p>
+            <h2>Solução de problemas</h2>
+            <div class="docs-faq">
+              <details><summary>O chatbot não inicia ou fica carregando.</summary><p>Verifique a conexão e recarregue a página. Se o problema continuar, o backend pode estar reiniciando ou sem acesso ao banco. O acesso anônimo depende da disponibilidade da rota de sessão.</p></details>
+              <details><summary>Minha sessão de visitante expirou.</summary><p>O SFAI tenta renovar automaticamente o token usando a chave local do navegador. Caso a chave tenha sido apagada, uma nova sessão é criada e o histórico anterior daquela sessão pode deixar de aparecer.</p></details>
+              <details><summary>Minhas conversas não aparecem.</summary><p>Confirme se está no mesmo navegador e perfil em que a conversa foi criada. Em uma conta, entre com o mesmo método de login. O histórico anônimo e o histórico de uma conta são identidades diferentes.</p></details>
+              <details><summary>O envio de imagem foi recusado.</summary><p>Use JPEG, PNG ou WebP, envie no máximo três imagens por mensagem e respeite os limites de 10 MB por arquivo e 14 MB no conjunto.</p></details>
+              <details><summary>Não aparece uma fonte na resposta.</summary><p>Nem toda resposta precisa de pesquisa documental ou externa. Quando uma fonte for exibida, abra o painel de referências. Para dados atuais, solicite explicitamente a verificação em uma fonte oficial.</p></details>
+              <details><summary>A classificação não corresponde ao que eu esperava.</summary><p>Revise a feira selecionada e complete o resumo com objetivo, método, materiais, resultados esperados e área de aplicação. Depois compare a sugestão com as categorias oficiais da feira.</p></details>
+            </div>
+          </section>
+
+          <section class="docs-section" id="glossario">
+            <p class="docs-kicker">16 · Referência rápida</p>
+            <h2>Glossário</h2>
+            <dl class="docs-glossary">
+              <div><dt>API</dt><dd>Interface pela qual o frontend envia solicitações ao backend e recebe respostas.</dd></div>
+              <div><dt>JWT</dt><dd>Token assinado usado para identificar a sessão que está acessando as rotas protegidas.</dd></div>
+              <div><dt>RAG</dt><dd>Técnica que recupera trechos de documentos relevantes e os fornece ao modelo como contexto.</dd></div>
+              <div><dt>Embedding</dt><dd>Representação numérica de um texto, usada para comparar significados e encontrar trechos semelhantes.</dd></div>
+              <div><dt>SSE</dt><dd>Server-Sent Events: mecanismo que permite ao servidor enviar partes da resposta ao navegador ao longo da geração.</dd></div>
+              <div><dt>Classificador</dt><dd>Modelo treinado para sugerir a área ou categoria científica mais compatível com um resumo.</dd></div>
+              <div><dt>Sessão anônima</dt><dd>Identidade temporária criada automaticamente para permitir o uso do chatbot sem cadastro tradicional.</dd></div>
+            </dl>
+            <div class="docs-final-cta">
+              <div><span class="docs-kicker">Pronto para começar?</span><h2>Use o SFAI sem criar uma conta.</h2><p>Abra o chatbot e envie sua primeira pergunta ou resumo.</p></div>
+              <a class="btn btn-primary" href="index.html">Abrir chatbot</a>
+            </div>
+          </section>
+        </article>
       </div>
     </main>
+    <footer class="docs-footer">
+      <span>SFAI · Documentação do sistema</span>
+      <a href="Layout.html">Página inicial</a>
+      <a href="#topo">Voltar ao topo ↑</a>
+    </footer>
   </body>
 </html>
