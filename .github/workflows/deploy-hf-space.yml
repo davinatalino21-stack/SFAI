@@ -32,6 +32,9 @@ jobs:
       - name: Instalar cliente do Hugging Face
         run: python -m pip install --upgrade huggingface_hub
 
+      - name: Validar sintaxe do backend
+        run: python -m py_compile Backend/main.py
+
       - name: Publicar somente o main.py no Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
