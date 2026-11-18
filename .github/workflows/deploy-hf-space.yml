@@ -1,0 +1,60 @@
+name: Deploy SFAI backend to Hugging Face Space
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Backend/main.py"
+      - ".github/workflows/deploy-hf-space.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sfai-hf-space-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar cliente do Hugging Face
+        run: python -m pip install --upgrade huggingface_hub
+
+      - name: Publicar somente o main.py no Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+
+          token = os.environ.get("HF_TOKEN", "").strip()
+          if not token:
+              raise SystemExit(
+                  "O segredo HF_TOKEN não está configurado no GitHub. "
+                  "Adicione um token Hugging Face com permissão de escrita "
+                  "no Space daviDumbProxMax/classificador-mostratec."
+              )
+
+          api = HfApi(token=token)
+          commit = api.upload_file(
+              path_or_fileobj="Backend/main.py",
+              path_in_repo="main.py",
+              repo_id="daviDumbProxMax/classificador-mostratec",
+              repo_type="space",
+              commit_message="Deploy: liberar sessões anônimas no SFAI",
+          )
+          print(f"Arquivo enviado ao Space. Commit: {commit.oid}")
+          PY
