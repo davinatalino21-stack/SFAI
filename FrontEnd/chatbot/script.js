@@ -275,7 +275,41 @@ function initSidebar() {
   aplicarEstadoSidebar(false);
 }
 
-const token = localStorage.getItem("token");
+let token = localStorage.getItem("token");
+const API_BASE_URL = "https://davidumbproxmax-classificador-mostratec.hf.space";
+
+async function criarSessaoAnonima() {
+  let guestKey = localStorage.getItem("sfai_guest_key");
+  if (!guestKey) {
+    guestKey = window.crypto?.randomUUID
+      ? window.crypto.randomUUID() + window.crypto.randomUUID()
+      : Date.now().toString(36) + Math.random().toString(36).slice(2) +
+        Math.random().toString(36).slice(2);
+    localStorage.setItem("sfai_guest_key", guestKey);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/sessao-anonima`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ guest_key: guestKey }),
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || !data.sucesso || !data.token || !data.usuario) {
+    throw new Error(data?.detail || "Não foi possível iniciar o acesso ao SFAI.");
+  }
+
+  token = data.token;
+  localStorage.setItem("token", token);
+  localStorage.setItem("usuario", JSON.stringify(data.usuario));
+  window.SFAIAccount?.save(data.usuario);
+  return data.usuario;
+}
+
+async function garantirSessaoChat() {
+  if (token) return;
+  await criarSessaoAnonima();
+}
 
 const cabecalhosAutenticados = () => {
   const headers = {
@@ -288,7 +322,27 @@ const cabecalhosAutenticados = () => {
   return headers;
 };
 
-const encerrarSessaoInvalida = () => {
+const encerrarSessaoInvalida = async () => {
+  const usuarioAtual = getUserData();
+  if (usuarioAtual?.anonimo) {
+    localStorage.removeItem("token");
+    token = null;
+    try {
+      await criarSessaoAnonima();
+      window.location.reload();
+    } catch (erro) {
+      console.error("Não foi possível renovar a sessão anônima:", erro);
+      const area = document.getElementById("chat-area");
+      if (area) {
+        const aviso = document.createElement("div");
+        aviso.className = "message bot chat-error";
+        aviso.textContent = "Não foi possível renovar o acesso. Verifique sua conexão e recarregue a página.";
+        area.appendChild(aviso);
+      }
+    }
+    return;
+  }
+
   window.SFAIAccount?.clear();
   window.location.href = "Login/login.html";
 };
@@ -339,10 +393,21 @@ const populateUserMenu = () => {
     return;
   }
 
-  nameElement.textContent = user.nome || "Usuário";
-  emailElement.textContent = user.email || "";
+  nameElement.textContent = user.anonimo ? "Visitante" : (user.nome || "Usuário");
+  emailElement.textContent = user.anonimo ? "Sessão sem cadastro" : (user.email || "");
 
-  const initials = getUserInitials(user.nome);
+  const profileAction = document.querySelector('[data-action="profile"]');
+  const settingsAction = document.querySelector('[data-action="settings"]');
+  const exitAction = document.querySelector('[data-action="logout"]');
+  if (profileAction) profileAction.style.display = user.anonimo ? "none" : "";
+  if (settingsAction) settingsAction.style.display = user.anonimo ? "none" : "";
+  if (exitAction) {
+    exitAction.dataset.action = user.anonimo ? "login" : "logout";
+    const label = exitAction.querySelector(".user-menu-item-title");
+    if (label) label.textContent = user.anonimo ? "Entrar ou criar conta" : "Sair";
+  }
+
+  const initials = user.anonimo ? "V" : getUserInitials(user.nome);
 
   if (user.foto) {
     const safeUrl = user.foto;
@@ -379,9 +444,18 @@ const populateUserMenu = () => {
 const handleUserMenuAction = (action) => {
   closeUserMenu();
 
+  if (action === "login") {
+    localStorage.removeItem("token");
+    localStorage.removeItem("usuario");
+    token = null;
+    window.location.href = "Login/login.html";
+    return;
+  }
+
   if (action === "logout") {
     localStorage.removeItem("token");
     localStorage.removeItem("usuario");
+    token = null;
     window.location.href = "Login/login.html";
     return;
   }
@@ -425,10 +499,6 @@ const initUserMenu = () => {
 
   populateUserMenu();
 };
-
-if (!token) {
-  window.location.href = "Login/login.html";
-}
 
 function atualizarModoBadge() {
   if (!feiraSelecionada) {
@@ -1317,7 +1387,6 @@ let historicoConversa = [];
 let chatMessages = [];
 let requisicaoChatAtiva = null;
 
-const API_BASE_URL = "https://davidumbproxmax-classificador-mostratec.hf.space";
 let conversaAtualId = null;
 let listaConversas = [];
 
@@ -2008,6 +2077,13 @@ function adicionarAcoesMensagem(elemento, texto, fontes = [], opcoes = {}) {
 async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
   const regenerando = opcoes.regenerar === true;
   if (requisicaoChatAtiva) return;
+  try {
+    await garantirSessaoChat();
+  } catch (erro) {
+    console.error("Falha ao iniciar sessão do chat:", erro);
+    if (imageStatus) imageStatus.textContent = erro.message || "Não foi possível conectar ao SFAI.";
+    return;
+  }
 
   let userMessage = (
     typeof mensagemOverride === "string" ? mensagemOverride : input.value
@@ -2142,8 +2218,8 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
       barraGeracao.remove();
       aiElement.classList.add("chat-error");
       aiElement.innerHTML =
-        '<span class="chat-error-msg">Sua sessão expirou. Redirecionando para o login...</span>';
-      setTimeout(encerrarSessaoInvalida, 1500);
+        '<span class="chat-error-msg">Sua sessão expirou. Renovando o acesso...</span>';
+      setTimeout(() => { void encerrarSessaoInvalida(); }, 500);
       return;
     }
 
@@ -2393,9 +2469,22 @@ if (mensagemInicial) {
   input.value = "";
 }
 
-window.onload = function () {
-  carregarConversaAtual();
+window.onload = async function () {
+  try {
+    await garantirSessaoChat();
+  } catch (erro) {
+    console.error("Falha ao iniciar o SFAI:", erro);
+    const area = document.getElementById("chat-area");
+    if (area) {
+      const aviso = document.createElement("div");
+      aviso.className = "message bot chat-error";
+      aviso.textContent = "Não foi possível iniciar o chatbot. Verifique sua conexão e tente recarregar a página.";
+      area.appendChild(aviso);
+    }
+    return;
+  }
 
+  carregarConversaAtual();
   initUserMenu();
   initSidebar();
 
