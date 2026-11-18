@@ -301,6 +301,7 @@ async function criarSessaoAnonima() {
 
   token = data.token;
   localStorage.setItem("token", token);
+  localStorage.setItem("sfai_guest_key", data.guest_key);
   localStorage.setItem("usuario", JSON.stringify(data.usuario));
   window.SFAIAccount?.save(data.usuario);
   return data.usuario;
