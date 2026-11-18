@@ -218,21 +218,44 @@ function centralizarCard(indice, comportamento = "smooth") {
     window.moverSugestoes = direcao =>
       mover(Number(direcao) || 1, true);
 
+    function reposicionarAposLayout(resetar = false) {
+      // Duas frames garantem que display, largura da sidebar e cards já
+      // foram recalculados antes de medir o centro do carrossel.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!track.clientWidth || !carousel.getClientRects().length) return;
+
+          const indice = resetar ? quantidade : indiceMaisProximo();
+          centralizarCard(indice, "auto");
+          atualizarProfundidade();
+          carousel.classList.add("is-ready");
+          agendarAutomatico();
+        });
+      });
+    }
+
     window.SFAISuggestionCarousel = {
       move: window.moverSugestoes,
-      pause: pausarAposInteracao
+      pause: pausarAposInteracao,
+      refresh: () => reposicionarAposLayout(false),
+      reset: () => reposicionarAposLayout(true)
     };
 
-    requestAnimationFrame(() => {
-      centralizarCard(quantidade, "auto");
-      atualizarProfundidade();
-      carousel.classList.add("is-ready");
-      agendarAutomatico();
-    });
+    // Se a página iniciou dentro de uma conversa, o carrossel está oculto.
+    // O ResizeObserver o reposiciona assim que a área volta a ter largura.
+    if ("ResizeObserver" in window) {
+      const observadorLayout = new ResizeObserver(() => {
+        if (track.clientWidth > 0 && carousel.classList.contains("is-ready")) {
+          reposicionarAposLayout(false);
+        }
+      });
+      observadorLayout.observe(carousel);
+    }
+
+    reposicionarAposLayout(true);
 
     window.addEventListener("resize", () => {
-      centralizarCard(indiceMaisProximo(), "auto");
-      solicitarAtualizacao();
+      reposicionarAposLayout(false);
     }, { passive: true });
   }
 
