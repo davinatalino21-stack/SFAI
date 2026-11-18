@@ -314,3 +314,47 @@
   .landing-hero-content h1 { max-width: 100%; }
   .feature-card { min-height: 0; }
 }
+
+
+/* Ações do topo: login e acesso anônimo */
+.landing-header .nav-login,
+.landing-header .nav-start {
+  min-height: 40px;
+  padding: 9px 16px;
+  font-size: .88rem;
+  white-space: nowrap;
+}
+
+.landing-header .nav-login {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+}
+
+.landing-header .nav-login:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent-muted);
+}
+
+.btn-anonymous {
+  background: color-mix(in srgb, var(--surface) 88%, var(--bg) 12%);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.btn-anonymous:hover {
+  background: var(--surface-hover);
+  border-color: var(--text-faint);
+  color: var(--text);
+  box-shadow: none;
+}
+
+@media (max-width: 540px) {
+  .landing-header .nav-login,
+  .landing-header .nav-start {
+    padding: 9px 12px;
+    font-size: .82rem;
+  }
+}
