@@ -2828,7 +2828,11 @@ def classificar_resumo_api(
 
         mensagem_assistente_substituir_id = ultimas_mensagens[0].id
     else:
-        conteudo_usuario = mensagem if modo == "conversa" else texto
+        conteudo_usuario = (
+            mensagem
+            if modo == "conversa"
+            else f"Classificar resumo: {texto}"
+        )
         conteudo_usuario = anexar_contexto_visual_salvo(conteudo_usuario, contexto_visual)
 
         nova_msg_user = Mensagem(
