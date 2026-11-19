@@ -1563,15 +1563,18 @@ async function abrirConversa(conversaId) {
         }
       } else {
         const mensagemSalva = separarContextoVisualSalvo(msg.conteudo);
-        messageElement.textContent = mensagemSalva.texto;
+        const ehClassificacao = /^Classificar resumo:\s*/.test(mensagemSalva.texto);
+        const textoVisivel = mensagemSalva.texto.replace(/^Classificar resumo:\s*/, "");
+        messageElement.textContent = textoVisivel;
         if (mensagemSalva.temImagem) adicionarIndicadorImagem(messageElement);
         chatArea.appendChild(messageElement);
         chatMessages.push({
           role,
-          content: mensagemSalva.texto,
+          content: textoVisivel,
           temImagem: mensagemSalva.temImagem,
+          classificacao: ehClassificacao,
         });
-        historicoConversa.push({ role, content: mensagemSalva.texto });
+        historicoConversa.push({ role, content: textoVisivel });
       }
     });
 
@@ -1741,9 +1744,14 @@ function carregarConversaAtual() {
             if (tipoInteracao === "selecao_feira" && ultimaMensagem) {
               renderizarQuizFeira(messageElement);
             } else if (tipoInteracao !== "selecao_feira") {
-              const temPerguntaAnterior = mensagens[indiceMensagem - 1]?.role === "user";
+              const perguntaAnterior = mensagens[indiceMensagem - 1];
+              const temPerguntaAnterior = perguntaAnterior?.role === "user";
               adicionarAcoesMensagem(messageElement, item.content, item.fontes || [], {
-                allowRegenerate: ultimaMensagem && temPerguntaAnterior && Boolean(conversaAtualId),
+                allowRegenerate:
+                  ultimaMensagem &&
+                  temPerguntaAnterior &&
+                  !perguntaAnterior.classificacao &&
+                  Boolean(conversaAtualId),
               });
             }
           }
@@ -2255,6 +2263,7 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
       role: "user",
       content: userMessage,
       temImagem: false,
+      classificacao: modo === "classificacao",
     });
     salvarConversaAtual();
   }
