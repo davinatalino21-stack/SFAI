@@ -2323,3 +2323,49 @@
     width: 100%;
   }
 }
+
+
+/* Expansão de mensagens longas enviadas pelo usuário */
+.message-user-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.message.user.message-user-collapsible {
+  padding-bottom: 10px;
+}
+
+.message-user-content.is-collapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 9;
+  line-clamp: 9;
+  overflow: hidden;
+}
+
+.message-user-toggle {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 9px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.88;
+  cursor: pointer;
+}
+
+.message-user-toggle:hover {
+  opacity: 1;
+}
+
+.message-user-toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
