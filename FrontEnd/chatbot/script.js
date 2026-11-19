@@ -10,9 +10,18 @@ const MAX_TAMANHO_TOTAL_IMAGENS = 14 * 1024 * 1024;
 let imagensAnexadas = [];
 const chatArea = document.getElementById("chat-area");
 const chatContainer = document.getElementById("chat-container");
-const modeBadge = document.getElementById("modeBadge");
 const SECRET_CLEAR_CODE = "//clearAll";
-const PLACEHOLDER_PADRAO = 'aperte no "+" e classifique seu projeto!';
+const PLACEHOLDER_PADRAO = "Escreva sua mensagem...";
+const OPCOES_FEIRA_CLASSIFICACAO = [
+  { value: "FEBRACE", label: "FEBRACE" },
+  { value: "MOSTRATEC", label: "MOSTRATEC" },
+  { value: "Ciências para Todos", label: "Ciências para Todos" },
+  { value: "12ª DIREC", label: "12ª DIREC" },
+];
+const PERGUNTA_SELECAO_FEIRA =
+  "Para qual feira você gostaria de classificar seu projeto?";
+const PREFIXO_AGUARDANDO_RESUMO =
+  "Certo! Envie o resumo do seu projeto.";
 
 const appMain = document.querySelector(".app-main");
 function syncLayoutState() {
@@ -500,37 +509,6 @@ const initUserMenu = () => {
 
   populateUserMenu();
 };
-
-function atualizarModoBadge() {
-  if (!feiraSelecionada) {
-    modeBadge.classList.remove("show", "classificacao");
-    modeBadge.textContent = "";
-    return;
-  }
-
-  modeBadge.classList.add("show", "classificacao");
-  let texto;
-  if (feiraSelecionada === "MOSTRATEC") {
-    texto = "Classificar para Mostratec";
-  } else if (feiraSelecionada === "FEBRACE") {
-    texto = "Classificar para Febrace";
-  } else if (feiraSelecionada === "Ciências para Todos") {
-    texto = "Classificar para Ciências para Todos";
-  } else if (feiraSelecionada === "12ª DIREC") {
-    texto = "Classificar para 12ª Direc";
-  } else {
-    texto = "Classificação ativa";
-  }
-  modeBadge.innerHTML = `<span class="mode-badge-close" aria-hidden="true">×</span>${texto}`;
-}
-
-modeBadge.addEventListener("click", () => {
-  if (feiraSelecionada) {
-    feiraSelecionada = "";
-    input.placeholder = PLACEHOLDER_PADRAO;
-    atualizarModoBadge();
-  }
-});
 
 function ajustarAlturaTextarea() {
   // Campo vazio mantém a altura de uma linha: em telas estreitas o
@@ -1570,13 +1548,19 @@ async function abrirConversa(conversaId) {
         chatArea.appendChild(messageElement);
         void renderizarMatematica(messageElement);
         const ultimaMensagem = indiceMensagem === mensagens.length - 1;
+        const tipoInteracao = identificarInteracaoMensagem(conteudo);
+        if (tipoInteracao === "selecao_feira" && ultimaMensagem) {
+          renderizarQuizFeira(messageElement);
+        }
         const perguntaAnterior = mensagens[indiceMensagem - 1];
         const podeRegenerar = ultimaMensagem && Boolean(conversaAtualId) &&
           perguntaAnterior?.remetente === "user" &&
           !String(perguntaAnterior.conteudo || "").startsWith("Classificar resumo:");
-        adicionarAcoesMensagem(messageElement, conteudo, msg.fontes || [], {
-          allowRegenerate: podeRegenerar,
-        });
+        if (tipoInteracao !== "selecao_feira") {
+          adicionarAcoesMensagem(messageElement, conteudo, msg.fontes || [], {
+            allowRegenerate: podeRegenerar,
+          });
+        }
       } else {
         const mensagemSalva = separarContextoVisualSalvo(msg.conteudo);
         messageElement.textContent = mensagemSalva.texto;
@@ -1640,10 +1624,6 @@ function novaConversa() {
     if (imageInput) imageInput.value = "";
     renderizarPreviaImagens();
     if (imageStatus) imageStatus.textContent = "";
-    feiraSelecionada = "";
-    document.getElementById("feiraPopup")?.classList.remove("show");
-    document.getElementById("feiraToggle")?.setAttribute("aria-expanded", "false");
-
     primeiravez = true;
     input.value = "";
     resetarAlturaTextarea();
@@ -1757,10 +1737,15 @@ function carregarConversaAtual() {
           if (item.role === "assistant") {
             void renderizarMatematica(messageElement);
             const ultimaMensagem = indiceMensagem === mensagens.length - 1;
-            const temPerguntaAnterior = mensagens[indiceMensagem - 1]?.role === "user";
-            adicionarAcoesMensagem(messageElement, item.content, item.fontes || [], {
-              allowRegenerate: ultimaMensagem && temPerguntaAnterior && Boolean(conversaAtualId),
-            });
+            const tipoInteracao = item.tipoInteracao || identificarInteracaoMensagem(item.content);
+            if (tipoInteracao === "selecao_feira" && ultimaMensagem) {
+              renderizarQuizFeira(messageElement);
+            } else if (tipoInteracao !== "selecao_feira") {
+              const temPerguntaAnterior = mensagens[indiceMensagem - 1]?.role === "user";
+              adicionarAcoesMensagem(messageElement, item.content, item.fontes || [], {
+                allowRegenerate: ultimaMensagem && temPerguntaAnterior && Boolean(conversaAtualId),
+              });
+            }
           }
         });
         chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
@@ -1794,7 +1779,106 @@ function carregarConversaAtual() {
 }
 
 let contexto = "";
-let feiraSelecionada = "";
+
+function identificarInteracaoMensagem(texto) {
+  const conteudo = String(texto || "").trim();
+  if (conteudo === PERGUNTA_SELECAO_FEIRA) return "selecao_feira";
+  if (conteudo.startsWith(PREFIXO_AGUARDANDO_RESUMO)) return "aguardando_resumo";
+  return null;
+}
+
+function obterFeiraPendenteClassificacao() {
+  const ultimaMensagem = chatMessages.at(-1);
+  if (ultimaMensagem?.role !== "assistant") return "";
+
+  const conteudo = String(ultimaMensagem.content || "").trim();
+  if (!conteudo.startsWith(PREFIXO_AGUARDANDO_RESUMO)) return "";
+
+  const opcao = OPCOES_FEIRA_CLASSIFICACAO.find((item) =>
+    conteudo.includes(`na feira ${item.label}.`)
+  );
+  return opcao?.value || "";
+}
+
+function renderizarQuizFeira(elemento) {
+  if (!elemento || elemento.querySelector(".sfai-classification-quiz")) return;
+
+  const quiz = document.createElement("section");
+  quiz.className = "sfai-classification-quiz";
+  quiz.setAttribute("aria-label", "Escolha da feira para classificação");
+
+  const titulo = document.createElement("p");
+  titulo.className = "sfai-quiz-hint";
+  titulo.textContent = "Selecione apenas uma opção:";
+  quiz.appendChild(titulo);
+
+  const grupo = document.createElement("div");
+  grupo.className = "sfai-quiz-options";
+  const nomeGrupo = `sfai-feira-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  let feiraEscolhida = "";
+
+  OPCOES_FEIRA_CLASSIFICACAO.forEach((opcao, indice) => {
+    const label = document.createElement("label");
+    label.className = "sfai-quiz-option";
+
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = nomeGrupo;
+    radio.value = opcao.value;
+    radio.id = `${nomeGrupo}-${indice}`;
+
+    const texto = document.createElement("span");
+    texto.textContent = opcao.label;
+
+    radio.addEventListener("change", () => {
+      feiraEscolhida = opcao.value;
+      grupo.querySelectorAll(".sfai-quiz-option").forEach((item) => {
+        item.classList.toggle(
+          "is-selected",
+          item.querySelector("input")?.checked === true,
+        );
+      });
+      enviar.disabled = !feiraEscolhida;
+    });
+
+    label.htmlFor = radio.id;
+    label.append(radio, texto);
+    grupo.appendChild(label);
+  });
+
+  const enviar = document.createElement("button");
+  enviar.type = "button";
+  enviar.className = "sfai-quiz-submit";
+  enviar.textContent = "Enviar";
+  enviar.disabled = true;
+
+  enviar.addEventListener("click", () => {
+    if (!feiraEscolhida || enviar.disabled) return;
+
+    const opcao = OPCOES_FEIRA_CLASSIFICACAO.find(
+      (item) => item.value === feiraEscolhida,
+    );
+    if (!opcao) return;
+
+    grupo.querySelectorAll("input").forEach((radio) => {
+      radio.disabled = true;
+    });
+    enviar.disabled = true;
+    enviar.textContent = "Enviado";
+    quiz.classList.add("is-submitted");
+
+    void enviarMensagem(
+      `Quero classificar meu projeto para a feira ${opcao.label}.`,
+      {
+        fluxoClassificacao: "selecionar_feira",
+        feiraClassificacao: opcao.value,
+      },
+    );
+  });
+
+  quiz.append(grupo, enviar);
+  elemento.appendChild(quiz);
+}
 
 input.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
@@ -1807,47 +1891,7 @@ input.addEventListener("keydown", (event) => {
   enviarMensagem();
 });
 
-function toggleFeiraPopup() {
-  const popup = document.getElementById("feiraPopup");
-  popup.classList.toggle("show");
-}
-
-function selecionarFeira(opcao) {
-  if (feiraSelecionada === opcao) {
-    feiraSelecionada = "";
-  } else {
-    feiraSelecionada = opcao;
-  }
-
-  document.getElementById("feiraPopup").classList.remove("show");
-
-  if (feiraSelecionada) {
-    let feiraSlecionadaLowerCase = "";
-    if (feiraSelecionada == "MOSTRATEC") {
-      feiraSlecionadaLowerCase = "Mostratec";
-    } else if (feiraSelecionada == "FEBRACE") {
-      feiraSlecionadaLowerCase = "Febrace";
-    } else if (feiraSelecionada == "Ciências para Todos") {
-      feiraSlecionadaLowerCase = feiraSelecionada;
-    } else if (feiraSelecionada == "12ª DIREC") {
-      feiraSlecionadaLowerCase = "12ª Direc";
-    }
-    input.placeholder = `${feiraSlecionadaLowerCase}`;
-  } else {
-    input.placeholder = PLACEHOLDER_PADRAO;
-  }
-
-  atualizarModoBadge();
-}
-
 window.addEventListener("click", (event) => {
-  const popup = document.getElementById("feiraPopup");
-  const toggle = event.target.closest(".options-input-area");
-  const insidePopup = event.target.closest(".feira-popup");
-  if (!toggle && !insidePopup && popup) {
-    popup.classList.remove("show");
-  }
-
   const insideUserMenu = event.target.closest("#user-menu-widget");
   if (!insideUserMenu) {
     closeUserMenu();
@@ -2125,6 +2169,22 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
     typeof mensagemOverride === "string" ? mensagemOverride : input.value
   ).trim();
   const transformacao = opcoes.transformacao || "";
+  const fluxoClassificacao = opcoes.fluxoClassificacao || "";
+  const feiraPendenteClassificacao = (
+    !regenerando && !transformacao && !fluxoClassificacao
+      ? obterFeiraPendenteClassificacao()
+      : ""
+  );
+  const modo = (
+    regenerando || transformacao || fluxoClassificacao === "selecionar_feira"
+      ? "conversa"
+      : (feiraPendenteClassificacao ? "classificacao" : "conversa")
+  );
+  const feiraDaRequisicao = (
+    fluxoClassificacao === "selecionar_feira"
+      ? (opcoes.feiraClassificacao || "")
+      : feiraPendenteClassificacao
+  );
   const imagensParaEnvio = imagensAnexadas.slice();
   if (!userMessage && imagensParaEnvio.length) {
     userMessage = imagensParaEnvio.length > 1
@@ -2211,21 +2271,6 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
   requisicaoChatAtiva = controller;
   const barraGeracao = adicionarAcoesGeracao(aiElement, controller);
 
-  const modo = (regenerando || transformacao)
-    ? "conversa"
-    : (feiraSelecionada ? "classificacao" : "conversa");
-
-  let feiraMapeada = "";
-  if (
-    feiraSelecionada === "Ciências para Todos" ||
-    feiraSelecionada === "12ª DIREC" ||
-    feiraSelecionada === "FEBRACE"
-  ) {
-    feiraMapeada = "FEBRACE";
-  } else if (feiraSelecionada === "MOSTRATEC") {
-    feiraMapeada = "MOSTRATEC";
-  }
-
   try {
     const user = getUserData();
     const usuarioId = user?.id || null;
@@ -2239,8 +2284,9 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
         usuario_id: usuarioId,
         conversa_id: conversaAtualId,
         resumo: userMessage,
-        feira: regenerando ? "" : feiraMapeada,
+        feira: regenerando ? "" : feiraDaRequisicao,
         modo: modo,
+        fluxo_classificacao: fluxoClassificacao || null,
         mensagem: userMessage,
         // Transformações usam resposta JSON para validar o resultado antes de exibi-lo.
         stream: modo === "conversa" && !transformacao,
@@ -2360,11 +2406,14 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
 
       if (data.mensagem_id) aiElement.dataset.messageId = String(data.mensagem_id);
 
+      const tipoInteracao = data.interacao?.tipo || identificarInteracaoMensagem(textoIA);
+
       chatMessages.push({
         role: "assistant",
         content: textoIA,
         fontes: fontesResposta,
         messageId: data.mensagem_id || null,
+        tipoInteracao: tipoInteracao || null,
       });
       salvarConversaAtual();
 
@@ -2387,9 +2436,13 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
         opcoes.substituirElemento?.remove();
       }
 
-      adicionarAcoesMensagem(aiElement, textoIA, fontesResposta, {
-        allowRegenerate: modo === "conversa" && !transformacao,
-      });
+      if (tipoInteracao === "selecao_feira") {
+        renderizarQuizFeira(aiElement);
+      } else {
+        adicionarAcoesMensagem(aiElement, textoIA, fontesResposta, {
+          allowRegenerate: modo === "conversa" && !transformacao,
+        });
+      }
 
       chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" });
       salvarConversaAtual();
@@ -2478,12 +2531,6 @@ function fecharFaq() {
 
 function usarSugestao(texto) {
   if (!texto) return;
-
-  if (feiraSelecionada) {
-    feiraSelecionada = "";
-    input.placeholder = "O que vamos fazer hoje?";
-    atualizarModoBadge();
-  }
 
   input.value = texto;
   enviarMensagem();
