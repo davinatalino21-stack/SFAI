@@ -1,0 +1,45 @@
+/* Barra de rolagem do campo de mensagem expansível */
+.input-text textarea {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  scrollbar-gutter: stable;
+}
+
+.input-text textarea::-webkit-scrollbar {
+  width: 7px;
+}
+
+.input-text textarea::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 9px;
+}
+
+.input-text textarea::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
+}
+
+.input-text textarea::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+[data-theme="dark"] .input-text textarea {
+  scrollbar-color: rgba(148, 163, 184, 0.48) transparent;
+}
+
+[data-theme="dark"] .input-text textarea::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.48);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+[data-theme="dark"] .input-text textarea::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
