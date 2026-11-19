@@ -2289,7 +2289,7 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
         fluxo_classificacao: fluxoClassificacao || null,
         mensagem: userMessage,
         // Transformações usam resposta JSON para validar o resultado antes de exibi-lo.
-        stream: modo === "conversa" && !transformacao,
+        stream: modo === "conversa" && !transformacao && !fluxoClassificacao,
         regenerar: regenerando,
         acao_resposta: transformacao || null,
         resposta_alvo: transformacao ? (opcoes.respostaAlvo || "") : null,
