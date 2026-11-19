@@ -46,6 +46,37 @@ function separarContextoVisualSalvo(conteudo) {
   return { texto: texto.slice(0, indice).trim(), temImagem: true };
 }
 
+
+// Mensagens longas do usuário começam recolhidas para manter o chat compacto.
+function renderizarTextoUsuario(elemento, texto) {
+  const conteudo = String(texto || "");
+  const linhas = conteudo.split(/\r?\n/).length;
+  const precisaExpandir = conteudo.length > 600 || linhas > 8;
+
+  const corpo = document.createElement("div");
+  corpo.className = "message-user-content";
+  corpo.textContent = conteudo;
+  elemento.appendChild(corpo);
+
+  if (!precisaExpandir) return;
+
+  elemento.classList.add("message-user-collapsible");
+  corpo.classList.add("is-collapsed");
+
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "message-user-toggle";
+  botao.textContent = "Mostrar mais";
+  botao.setAttribute("aria-expanded", "false");
+  botao.addEventListener("click", () => {
+    const expandido = botao.getAttribute("aria-expanded") === "true";
+    corpo.classList.toggle("is-collapsed", expandido);
+    botao.setAttribute("aria-expanded", String(!expandido));
+    botao.textContent = expandido ? "Mostrar mais" : "Mostrar menos";
+  });
+  elemento.appendChild(botao);
+}
+
 function adicionarIndicadorImagem(elemento, quantidade = 1) {
   const indicador = document.createElement("div");
   indicador.className = "sfai-image-attachment-indicator";
@@ -1565,7 +1596,7 @@ async function abrirConversa(conversaId) {
         const mensagemSalva = separarContextoVisualSalvo(msg.conteudo);
         const ehClassificacao = /^Classificar resumo:\s*/.test(mensagemSalva.texto);
         const textoVisivel = mensagemSalva.texto.replace(/^Classificar resumo:\s*/, "");
-        messageElement.textContent = textoVisivel;
+        renderizarTextoUsuario(messageElement, textoVisivel);
         if (mensagemSalva.temImagem) adicionarIndicadorImagem(messageElement);
         chatArea.appendChild(messageElement);
         chatMessages.push({
@@ -2231,7 +2262,7 @@ async function enviarMensagem(mensagemOverride = null, opcoes = {}) {
 
     const messageElement = document.createElement("div");
     messageElement.classList.add("message", "user");
-    messageElement.textContent = userMessage;
+    renderizarTextoUsuario(messageElement, userMessage);
     adicionarMiniaturasImagem(
       messageElement,
       imagensParaEnvio.map((anexo) => anexo.dataUrl),
