@@ -1973,6 +1973,7 @@ class RequisicaoProjeto(BaseModel):
     acao_resposta: str | None = None
     resposta_alvo: str | None = None
     resposta_alvo_id: str | None = None
+    fluxo_classificacao: str | None = None
     imagens: list[str] = Field(default_factory=list)
 
 
@@ -2556,6 +2557,39 @@ def gerar_eventos_chat_stream(
     return _gerador()
 
 
+FEIRAS_DISPONIVEIS_CLASSIFICACAO = {
+    "FEBRACE": "FEBRACE",
+    "MOSTRATEC": "MOSTRATEC",
+    "CIÊNCIAS PARA TODOS": "Ciências para Todos",
+    "12ª DIREC": "12ª DIREC",
+}
+
+
+def detectar_pedido_classificacao(mensagem: str) -> bool:
+    """Identifica pedidos para classificar o projeto do próprio usuário."""
+    texto = (mensagem or "").lower().strip()
+    if not texto:
+        return False
+
+    # Perguntas sobre como o próprio usuário pode fazer a classificação
+    # continuam sendo respondidas normalmente pelo chat.
+    if re.search(r"\bcomo\s+(?:posso|poderia|faço|fazer|classificar|categorizar)\b", texto):
+        return False
+
+    alvo = re.search(
+        r"\b(?:meu|minha|meus|minhas|esse|essa|este|esta|o|a)\s+"
+        r"(?:projeto|resumo|trabalho)\b|\b(?:meu\s+)?projeto\b",
+        texto,
+    )
+    acao = re.search(
+        r"\b(?:pode|poderia|consegue|conseguiria|quero|gostaria|preciso|"
+        r"classific\w*|categor\w*|analisa\w*|avalie|avaliar|"
+        r"identifique|indique|descubra)\b",
+        texto,
+    )
+    return bool(alvo and acao)
+
+
 @app.post("/classificar")
 def classificar_resumo_api(
     dados: RequisicaoProjeto,
@@ -2568,6 +2602,28 @@ def classificar_resumo_api(
     texto = dados.resumo
     usuario_id = usuario_logado
     conversa_id_str = dados.conversa_id
+
+    if dados.fluxo_classificacao not in (None, "selecionar_feira"):
+        raise HTTPException(
+            status_code=400,
+            detail="Etapa de classificação desconhecida.",
+        )
+
+    if dados.fluxo_classificacao == "selecionar_feira":
+        nome_feira_fluxo = FEIRAS_DISPONIVEIS_CLASSIFICACAO.get(feira_selecionada)
+        if not nome_feira_fluxo:
+            raise HTTPException(
+                status_code=400,
+                detail="Selecione uma das feiras disponíveis para continuar.",
+            )
+        if modo != "conversa":
+            raise HTTPException(
+                status_code=400,
+                detail="A escolha da feira precisa acontecer dentro da conversa.",
+            )
+        mensagem = (
+            f"Quero classificar meu projeto para a feira {nome_feira_fluxo}."
+        )
 
     contexto_visual = ""
     mensagem_para_modelo = mensagem
@@ -2772,11 +2828,7 @@ def classificar_resumo_api(
 
         mensagem_assistente_substituir_id = ultimas_mensagens[0].id
     else:
-        conteudo_usuario = (
-            mensagem
-            if modo == "conversa"
-            else f"Classificar resumo: {texto}"
-        )
+        conteudo_usuario = mensagem if modo == "conversa" else texto
         conteudo_usuario = anexar_contexto_visual_salvo(conteudo_usuario, contexto_visual)
 
         nova_msg_user = Mensagem(
@@ -2787,6 +2839,65 @@ def classificar_resumo_api(
 
         db.add(nova_msg_user)
         db.commit()
+
+    # A escolha feita no cartão do chat é tratada como uma mensagem normal do usuário.
+    # A resposta seguinte é determinística para não depender de uma interpretação livre do LLM.
+    if dados.fluxo_classificacao == "selecionar_feira":
+        resposta_fluxo = (
+            "Certo! Envie o resumo do seu projeto. Vou analisá-lo e indicar a área "
+            f"em que ele melhor se encaixa na feira {nome_feira_fluxo}."
+        )
+        db.add(
+            Mensagem(
+                conversa_id=id_conversa_uuid,
+                remetente="assistant",
+                conteudo=resposta_fluxo,
+            )
+        )
+        db.commit()
+        return {
+            "conversa_id": str(id_conversa_uuid),
+            "titulo": conversa.titulo,
+            "resultado": resposta_fluxo,
+            "interacao": {
+                "tipo": "aguardando_resumo",
+                "feira": nome_feira_fluxo,
+            },
+        }
+
+    # Detecta pedidos naturais como "pode classificar meu projeto?" e inicia o quiz.
+    # Não intercepta perguntas com imagens, transformações ou regenerações.
+    if (
+        modo == "conversa"
+        and not dados.fluxo_classificacao
+        and not dados.acao_resposta
+        and not dados.regenerar
+        and not dados.imagens
+        and detectar_pedido_classificacao(mensagem)
+    ):
+        pergunta_feira = "Para qual feira você gostaria de classificar seu projeto?"
+        db.add(
+            Mensagem(
+                conversa_id=id_conversa_uuid,
+                remetente="assistant",
+                conteudo=pergunta_feira,
+            )
+        )
+        db.commit()
+        return {
+            "conversa_id": str(id_conversa_uuid),
+            "titulo": conversa.titulo,
+            "resultado": pergunta_feira,
+            "interacao": {
+                "tipo": "selecao_feira",
+                "opcoes": [
+                    {"value": "FEBRACE", "label": "FEBRACE"},
+                    {"value": "MOSTRATEC", "label": "MOSTRATEC"},
+                    {"value": "Ciências para Todos", "label": "Ciências para Todos"},
+                    {"value": "12ª DIREC", "label": "12ª DIREC"},
+                ],
+            },
+        }
 
     if acao_resposta:
         system_prompt_transformacao = (
@@ -3156,12 +3267,14 @@ def classificar_resumo_api(
     # MODO CLASSIFICAÇÃO
     # ========================================================
 
-    if feira_selecionada == "FEBRACE":
+    nome_feira_resultado = FEIRAS_DISPONIVEIS_CLASSIFICACAO.get(feira_selecionada)
+
+    if feira_selecionada in ("FEBRACE", "CIÊNCIAS PARA TODOS", "12ª DIREC"):
         modelo_ativo = MODELO_FEBRACE
         mapeamento_ativo = mapeamento_febrace
         instrucao_avaliador = (
-            "Você é um avaliador técnico especializado na FEBRACE "
-            "(Feira Brasileira de Ciências e Engenharia)."
+            "Você é um avaliador técnico especializado na feira "
+            f"{nome_feira_resultado}."
         )
 
     elif feira_selecionada == "MOSTRATEC":
@@ -3173,12 +3286,10 @@ def classificar_resumo_api(
         )
 
     else:
-        return {
-            "erro": (
-                "Para classificação de projetos, selecione "
-                "FEBRACE ou MOSTRATEC."
-            )
-        }
+        raise HTTPException(
+            status_code=400,
+            detail="Feira não reconhecida. Escolha uma das opções apresentadas no chat.",
+        )
 
     # ========================================================
     # CLASSIFICAÇÃO LOCAL — MODELO PRIVADO NO HUGGING FACE HUB
@@ -3214,7 +3325,7 @@ def classificar_resumo_api(
     cat_3 = categorias_top3[2]
 
     prompt_instrucao = (
-        f"Avalie tecnicamente este projeto para a {feira_selecionada}.\n"
+        f"Avalie tecnicamente este projeto para a {nome_feira_resultado}.\n"
         f"Categorias previstas pelo classificador local:\n"
         f"1. Principal: {cat_1}\n"
         f"2. Alternativa: {cat_2}\n"
